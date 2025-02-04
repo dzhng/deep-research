@@ -20,8 +20,10 @@
     "typescript": "^5.7.3"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^1.1.6",
     "@ai-sdk/openai": "^1.1.9",
     "@mendable/firecrawl-js": "^1.16.0",
+    "@openrouter/ai-sdk-provider": "^0.2.0",
     "ai": "^4.1.17",
     "js-tiktoken": "^1.0.17",
     "lodash-es": "^4.17.21",

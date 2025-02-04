@@ -91,6 +91,8 @@ npm install
 ```bash
 FIRECRAWL_KEY="your_firecrawl_key"
 OPENAI_KEY="your_openai_key"
+OPENROUTER_API_KEY="your_openrouter_api_key"
+ANTHROPIC_API_KEY="your_anthropic_api_key"
 ```
 
 ## Usage
