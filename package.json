@@ -22,6 +22,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^1.1.6",
     "@ai-sdk/openai": "^1.1.9",
+    "@ai-sdk/openai-compatible": "^0.1.8",
     "@mendable/firecrawl-js": "^1.16.0",
     "@openrouter/ai-sdk-provider": "^0.2.0",
     "ai": "^4.1.17",

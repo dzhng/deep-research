@@ -2,6 +2,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { getEncoding } from 'js-tiktoken';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
 import { RecursiveCharacterTextSplitter } from './text-splitter';
 
@@ -17,6 +18,10 @@ const anthropic = createAnthropic({
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!,
+});
+
+const openaiCompatible = createOpenAICompatible({
+  apiKey: process.env.PROVIDER_API_KEY!,
 });
 
 // Models
@@ -47,18 +52,14 @@ export const claudeSonnetModel = anthropic('claude-3-5-sonnet-20241022', {
 export const openrouterSonnetModel = openrouter('anthropic/claude-3.5-sonnet', {
   structuredOutputs: true,
 });
-// export const openrouterO3MiniModel = openrouter('openai/o3-mini', {
-//   structuredOutputs: true,
-// });
-// export const openrouterO1Model = openrouter('openai/o1', {
-//   structuredOutputs: true,
-// });
-// export const openrouterGpt4Model = openrouter('openai/chatgpt-4o-latest', {
-//   structuredOutputs: true,
-// });
-// export const deepseekV3Model = openrouter('deepseek/deepseek-chat', {
-//   structuredOutputs: true,
-// });
+
+// Using openai-compatible provider, replace provider-name & baseURL with the provider's name & base URL
+export const openAICompatible = createOpenAICompatible({
+  name: 'provider-name',
+  apiKey: process.env.PROVIDER_API_KEY,
+  baseURL: 'https://api.provider.com/v1',
+});
+
 
 const MinChunkSize = 140;
 const encoder = getEncoding('o200k_base');
