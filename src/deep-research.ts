@@ -1,10 +1,9 @@
 import FirecrawlApp, { SearchResponse } from '@mendable/firecrawl-js';
-import { generateObject } from 'ai';
 import { compact } from 'lodash-es';
 import pLimit from 'p-limit';
 import { z } from 'zod';
 
-import { o3MiniModel, trimPrompt } from './ai/providers';
+import { geminiModel, trimPrompt } from './ai/providers';
 import { systemPrompt } from './prompt';
 
 type ResearchResult = {
@@ -22,6 +21,8 @@ const firecrawl = new FirecrawlApp({
   apiUrl: process.env.FIRECRAWL_BASE_URL,
 });
 
+const model = geminiModel;
+
 // take en user query, return a list of SERP queries
 async function generateSerpQueries({
   query,
@@ -34,37 +35,40 @@ async function generateSerpQueries({
   // optional, if provided, the research will continue from the last learning
   learnings?: string[];
 }) {
-  const res = await generateObject({
-    model: o3MiniModel,
+  const res = await geminiModel.generate({
     system: systemPrompt(),
-    prompt: `Given the following prompt from the user, generate a list of SERP queries to research the topic. Return a maximum of ${numQueries} queries, but feel free to return less if the original prompt is clear. Make sure each query is unique and not similar to each other: <prompt>${query}</prompt>\n\n${
-      learnings
-        ? `Here are some learnings from previous research, use them to generate more specific queries: ${learnings.join(
-            '\n',
-          )}`
-        : ''
-    }`,
+    prompt: `Given the following prompt from the user, generate a list of SERP queries to research the topic.
+Return your response in JSON format wrapped in an object with a key "queries" whose value is an array. Use a maximum of ${numQueries} queries, but feel free to provide fewer if the prompt is clear.
+Make sure each query is unique:
+<prompt>${query}</prompt>
+${learnings ? `Here are some learnings from previous research: ${learnings.join('\n')}` : ''}`,
     schema: z.object({
-      queries: z
-        .array(
+      queries: z.array(
+        z.union([
           z.object({
             query: z.string().describe('The SERP query'),
-            researchGoal: z
-              .string()
-              .describe(
-                'First talk about the goal of the research that this query is meant to accomplish, then go deeper into how to advance the research once the results are found, mention additional research directions. Be as specific as possible, especially for additional research directions.',
-              ),
+            researchGoal: z.string().describe('The research goal for the query'),
           }),
-        )
-        .describe(`List of SERP queries, max of ${numQueries}`),
+          z.object({
+            query: z.string().describe('The SERP query'),
+            type: z.string().describe('Type information for the query'),
+          }),
+          z.string(),
+        ])
+      ).describe(`List of SERP queries, max of ${numQueries}`),
     }),
   });
-  console.log(
-    `Created ${res.object.queries.length} queries`,
-    res.object.queries,
-  );
-
-  return res.object.queries.slice(0, numQueries);
+  console.log(`Created ${res.object.queries.length} queries`, res.object.queries);
+  const fixedQueries = res.object.queries.map(item => {
+    if (typeof item === 'string') {
+      return { query: item, researchGoal: '' };
+    } else if ('type' in item && !('researchGoal' in item)) {
+      return { query: item.query, researchGoal: item.type };
+    } else {
+      return item;
+    }
+  });
+  return fixedQueries.slice(0, numQueries);
 }
 
 async function processSerpResult({
@@ -83,30 +87,27 @@ async function processSerpResult({
   );
   console.log(`Ran ${query}, found ${contents.length} contents`);
 
-  const res = await generateObject({
-    model: o3MiniModel,
-    abortSignal: AbortSignal.timeout(60_000),
+  const res = await geminiModel.generate({
     system: systemPrompt(),
-    prompt: `Given the following contents from a SERP search for the query <query>${query}</query>, generate a list of learnings from the contents. Return a maximum of ${numLearnings} learnings, but feel free to return less if the contents are clear. Make sure each learning is unique and not similar to each other. The learnings should be concise and to the point, as detailed and infromation dense as possible. Make sure to include any entities like people, places, companies, products, things, etc in the learnings, as well as any exact metrics, numbers, or dates. The learnings will be used to research the topic further.\n\n<contents>${contents
+    prompt: `Given the following contents from a SERP search for the query <query>${query}</query>, generate a list of learnings from the contents. Return a maximum of ${numLearnings} learnings, but feel free to return less if the contents are clear. Make sure each learning is unique and not similar to each other. The learnings should be concise and to the point, as detailed and information dense as possible. Make sure to include any entities like people, places, companies, products, things, etc in the learnings, as well as any exact metrics, numbers, or dates. The learnings will be used to research the topic further.\n\n<contents>${contents
       .map(content => `<content>\n${content}\n</content>`)
       .join('\n')}</contents>`,
     schema: z.object({
-      learnings: z
-        .array(z.string())
-        .describe(`List of learnings, max of ${numLearnings}`),
-      followUpQuestions: z
-        .array(z.string())
-        .describe(
-          `List of follow-up questions to research the topic further, max of ${numFollowUpQuestions}`,
-        ),
+      learnings: z.union([
+        z.array(z.string()),
+        z.string()
+      ]).describe(`List of learnings, max of ${numLearnings}`),
+      followUpQuestions: z.union([
+        z.array(z.string()),
+        z.string()
+      ]).describe(`List of follow-up questions to research the topic further, max of ${numFollowUpQuestions}`),
     }),
   });
-  console.log(
-    `Created ${res.object.learnings.length} learnings`,
-    res.object.learnings,
-  );
+  const fixedLearnings = Array.isArray(res.object.learnings) ? res.object.learnings : [res.object.learnings];
+  const fixedFollowUpQuestions = Array.isArray(res.object.followUpQuestions) ? res.object.followUpQuestions : [res.object.followUpQuestions];
+  console.log(`Created ${fixedLearnings.length} learnings`, fixedLearnings);
 
-  return res.object;
+  return { learnings: fixedLearnings, followUpQuestions: fixedFollowUpQuestions };
 }
 
 export async function writeFinalReport({
@@ -125,20 +126,27 @@ export async function writeFinalReport({
     150_000,
   );
 
-  const res = await generateObject({
-    model: o3MiniModel,
+  const res = await geminiModel.generate({
     system: systemPrompt(),
-    prompt: `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from previous research:\n\n<learnings>\n${learningsString}\n</learnings>`,
+    prompt: `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as detailed as possible, aim for 3 or more pages, include ALL the learnings from research. Your response must be a valid JSON object with a single key "reportMarkdown" that contains the complete final report in Markdown format. Do not include any additional text, explanations, or formatting outside the JSON object.
+
+<prompt>${prompt}</prompt>
+
+Here are all the learnings from previous research:
+
+<learnings>
+${learningsString}
+</learnings>`,
     schema: z.object({
-      reportMarkdown: z
-        .string()
-        .describe('Final report on the topic in Markdown'),
+      reportMarkdown: z.string().describe('Final report on the topic in Markdown'),
     }),
   });
 
   // Append the visited URLs section to the report
   const urlsSection = `\n\n## Sources\n\n${visitedUrls.map(url => `- ${url}`).join('\n')}`;
-  return res.object.reportMarkdown + urlsSection;
+
+  const finalReport = res.object.reportMarkdown + urlsSection;
+  return finalReport;
 }
 
 export async function deepResearch({
@@ -162,7 +170,7 @@ export async function deepResearch({
   const limit = pLimit(ConcurrencyLimit);
 
   const results = await Promise.all(
-    serpQueries.map(serpQuery =>
+    serpQueries.map((serpQuery) =>
       limit(async () => {
         try {
           const result = await firecrawl.search(serpQuery.query, {
@@ -171,8 +179,7 @@ export async function deepResearch({
             scrapeOptions: { formats: ['markdown'] },
           });
 
-          // Collect URLs from this search
-          const newUrls = compact(result.data.map(item => item.url));
+          const newUrls = compact(result.data.map((item) => item.url));
           const newBreadth = Math.ceil(breadth / 2);
           const newDepth = depth - 1;
 
@@ -185,14 +192,11 @@ export async function deepResearch({
           const allUrls = [...visitedUrls, ...newUrls];
 
           if (newDepth > 0) {
-            console.log(
-              `Researching deeper, breadth: ${newBreadth}, depth: ${newDepth}`,
-            );
-
+            console.log(`Researching deeper, breadth: ${newBreadth}, depth: ${newDepth}`);
             const nextQuery = `
-            Previous research goal: ${serpQuery.researchGoal}
-            Follow-up research directions: ${newLearnings.followUpQuestions.map(q => `\n${q}`).join('')}
-          `.trim();
+              Previous research goal: ${serpQuery.researchGoal}
+              Follow-up research directions: ${newLearnings.followUpQuestions.map((q) => `\n${q}`).join('')}
+            `.trim();
 
             return deepResearch({
               query: nextQuery,
@@ -214,12 +218,12 @@ export async function deepResearch({
             visitedUrls: [],
           };
         }
-      }),
-    ),
+      })
+    )
   );
 
   return {
-    learnings: [...new Set(results.flatMap(r => r.learnings))],
-    visitedUrls: [...new Set(results.flatMap(r => r.visitedUrls))],
+    learnings: [...new Set(results.flatMap((r) => r.learnings))],
+    visitedUrls: [...new Set(results.flatMap((r) => r.visitedUrls))],
   };
 }
