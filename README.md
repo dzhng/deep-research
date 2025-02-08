@@ -80,6 +80,7 @@ flowchart TB
 - API keys for:
   - Firecrawl API (for web search and content extraction)
   - OpenAI API (for o3 mini model)
+  - Google API (for additional search capabilities)
 
 ## Setup
 
@@ -98,6 +99,7 @@ FIRECRAWL_KEY="your_firecrawl_key"
 # FIRECRAWL_BASE_URL="http://localhost:3002"
 
 OPENAI_KEY="your_openai_key"
+GOOGLE_API_KEY="your_google_api_key"  # Required for Google search integration
 ```
 
 ## Usage
@@ -128,7 +130,7 @@ The final report will be saved as `output.md` in your working directory.
 
 If you have a paid version of Firecrawl or a local version, feel free to increase the `ConcurrencyLimit` in `deep-research.ts` so it runs a lot faster.
 
-If you have a free version, you may sometime run into rate limit errors, you can reduce the limit (but it will run a lot slower).
+If you have a free version, you may sometime run into rate limit errors. The system now includes a RateLimiter utility to help manage API request rates more effectively. You can adjust the rate limits in the configuration if needed.
 
 ## How It Works
 
