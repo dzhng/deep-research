@@ -5,3 +5,5 @@ services:
       - .env.local
     tty: true
     stdin_open: true
+    volumes:
+      - ./output:/app/output

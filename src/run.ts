@@ -83,10 +83,10 @@ ${followUpQuestions.map((q, i) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
   });
 
   // Save report to file
-  await fs.writeFile('output.md', report, 'utf-8');
+  await fs.writeFile('output/output.md', report, 'utf-8');
 
   console.log(`\n\nFinal Report:\n\n${report}`);
-  console.log('\nReport has been saved to output.md');
+  console.log('\nReport has been saved to output/output.md');
   rl.close();
 }
 
