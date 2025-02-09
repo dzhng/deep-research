@@ -80,6 +80,7 @@ flowchart TB
 - API keys for:
   - Firecrawl API (for web search and content extraction)
   - OpenAI API (for o3 mini model)
+  - Gemini API (for gemini thinking model)
 
 ## Setup
 
@@ -100,9 +101,11 @@ FIRECRAWL_KEY="your_firecrawl_key"
 # FIRECRAWL_BASE_URL="http://localhost:3002"
 
 OPENAI_KEY="your_openai_key"
+GOOGLE_API_KEY="your_google_key"  # Required for gemini thinking model
 ```
 
 To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOINT` and `OPENAI_MODEL`:
+
 - Set `OPENAI_ENDPOINT` to the address of your local server (eg."http://localhost:1234/v1")
 - Set `OPENAI_MODEL` to the name of the model loaded in your local server.
 
@@ -127,10 +130,13 @@ npm start
 
 You'll be prompted to:
 
-1. Enter your research query
-2. Specify research breadth (recommended: 3-10, default: 6)
-3. Specify research depth (recommended: 1-5, default: 3)
-4. Answer follow-up questions to refine the research direction
+1. Select an AI model:
+   - OpenAI (default) - Uses o3 mini model (Requires OPENAI_KEY)
+   - Gemini - Uses gemini thinking model (Requires GOOGLE_API_KEY)
+2. Enter your research query
+3. Specify research breadth (recommended: 3-10, default: 6)
+4. Specify research depth (recommended: 1-5, default: 3)
+5. Answer follow-up questions to refine the research direction
 
 The system will then:
 
@@ -149,7 +155,7 @@ If you have a free version, you may sometime run into rate limit errors, you can
 
 ### Custom endpoints and models
 
-There are 2 other optional env vars that lets you tweak the endpoint (for other OpenAI compatible APIs like OpenRouter or Gemini) as well as the model string.
+There are 2 optional env vars that let you tweak the endpoint (for other OpenAI compatible APIs like OpenRouter) as well as the model string. Note that these are only applicable when using OpenAI models.
 
 ```bash
 OPENAI_ENDPOINT="custom_endpoint"

@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.1.9",
+    "@google/generative-ai": "^0.21.0",
     "@mendable/firecrawl-js": "^1.16.0",
     "ai": "^4.1.17",
     "js-tiktoken": "^1.0.17",
