@@ -1,5 +1,7 @@
 import * as fs from 'fs/promises';
+import * as path from 'path';
 import * as readline from 'readline';
+import { fileURLToPath } from 'url';
 
 import { deepResearch, writeFinalReport } from './deep-research';
 import { generateFeedback } from './feedback';
@@ -95,11 +97,24 @@ ${followUpQuestions.map((q: string, i: number) => `Q: ${q}\nA: ${answers[i]}`).j
     visitedUrls,
   });
 
-  // Save report to file
-  await fs.writeFile('output.md', report, 'utf-8');
+  // Extract title from report by finding first h1 markdown heading
+  const titleMatch = report.match(/^#\s+(.+)$/m);
+  let title = titleMatch?.[1]?.trim() || 'research-report';
+  // Remove "Final Report on" prefix if present (case insensitive)
+  title = title.replace(/^\s*final\s+report\s+on\s*/i, '').trim();
+  // Create filename-safe version of title
+  const filename = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`;
+  
+  // Ensure reports directory exists
+  const reportsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'reports');
+  await fs.mkdir(reportsDir, { recursive: true });
+  
+  // Save report to file in reports directory
+  const reportPath = path.join(reportsDir, filename);
+  await fs.writeFile(reportPath, report, 'utf-8');
 
   console.log(`\n\nFinal Report:\n\n${report}`);
-  console.log('\nReport has been saved to output.md');
+  console.log(`\nReport has been saved to ./reports/${filename}.md`);
   rl.close();
 }
 
