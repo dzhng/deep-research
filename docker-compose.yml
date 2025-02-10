@@ -1,7 +1,0 @@
-services:
-  deep-research:
-    build: .
-    env_file:
-      - .env.local
-    tty: true
-    stdin_open: true

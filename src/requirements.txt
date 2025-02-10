@@ -1,0 +1,6 @@
+firecrawl-py==0.0.20 # V1 has removed the search api
+openai
+tiktoken
+python-dotenv
+pydantic
+colorlog
