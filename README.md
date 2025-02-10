@@ -138,6 +138,7 @@ You'll be prompted to:
 4. Specify research depth (recommended: 1-5, default: 3)
 5. Answer follow-up questions to refine the research direction
 
+
 The system will then:
 
 1. Generate and execute search queries
