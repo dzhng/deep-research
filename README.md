@@ -139,7 +139,7 @@ The system will then:
 3. Recursively explore deeper based on findings
 4. Generate a comprehensive markdown report
 
-The final report will be saved as `output.md` in your working directory.
+The final report will be saved as `./reports/{unique-report-title}.md` in your working directory.
 
 ### Concurrency
 
