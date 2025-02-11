@@ -77,7 +77,7 @@ async def main():
     )
 
     # Save report to file
-    Path("report.md").write_text(report, encoding="utf-8")
+    Path("../output/report.md").write_text(report, encoding="utf-8")
 
     logger.info(f"\n\nFinal Report:\n\n{report}")
     logger.info("\nReport has been saved to report.md")

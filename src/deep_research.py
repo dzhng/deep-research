@@ -106,7 +106,7 @@ Make sure each query is unique and not similar to each other: <prompt>{query}</p
         result = response.parsed.dict()
     else:
         raise Exception("Failed to parse response")
-    logger.info(f"Created {len(result['queries'])} queries,  \n {'\n'.join(result['queries'])}")
+    logger.info(f"Created {len(result['queries'])} queries" +  f"\n{str(result['queries'])}")
     return [SerpQuery(**query) for query in result['queries']]
 
 async def process_serp_result(
@@ -147,7 +147,7 @@ Respond with JSON in the format: {{"learnings": ["learning1", ...], "followUpQue
         result = response.parsed.dict()
     else:
         raise Exception("Failed to parse response")
-    logger.info(f"Created {len(result['learnings'])} learnings \n{'\n'.join(result['learnings'])}")
+    logger.info(f"Created {len(result['learnings'])} learnings" +  f"\n{str(result['learnings'])}")
     return result
 
 
