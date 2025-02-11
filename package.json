@@ -4,8 +4,8 @@
   "main": "index.ts",
   "scripts": {
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "tsx": "tsx --env-file=.env.local",
-    "start": "tsx --env-file=.env.local src/run.ts",
+    "tsx": "tsx",
+    "start": "tsx src/run.ts",
     "docker": "tsx src/run.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -24,6 +24,7 @@
     "@ai-sdk/openai": "^1.1.9",
     "@mendable/firecrawl-js": "^1.16.0",
     "ai": "^4.1.17",
+    "dotenv": "^16.4.7",
     "js-tiktoken": "^1.0.17",
     "lodash-es": "^4.17.21",
     "p-limit": "^6.2.0",

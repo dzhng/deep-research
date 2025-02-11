@@ -4,6 +4,8 @@ import * as readline from 'readline';
 import { deepResearch, writeFinalReport } from './deep-research';
 import { generateFeedback } from './feedback';
 import { OutputManager } from './output-manager';
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 
 const output = new OutputManager();
 
