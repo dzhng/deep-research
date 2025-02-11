@@ -22,6 +22,7 @@ o3_mini_model = {
 }
 
 MIN_CHUNK_SIZE = 200
+CHUNK_OVERLAP = 50
 encoder = tiktoken.get_encoding("cl100k_base")
 
 def trim_prompt(prompt: str, context_size: int = 120_000) -> str:
@@ -43,7 +44,7 @@ def trim_prompt(prompt: str, context_size: int = 120_000) -> str:
     if chunk_size < MIN_CHUNK_SIZE:
         return prompt[:MIN_CHUNK_SIZE]
         
-    splitter = RecursiveCharacterTextSplitter(fields=TextSplitterParams(chunk_size=chunk_size, chunk_overlap=0))
+    splitter = RecursiveCharacterTextSplitter(fields=TextSplitterParams(chunk_size=chunk_size, chunk_overlap=CHUNK_OVERLAP))
     trimmed_prompt = splitter.split_text(prompt)[0]
     
     # Handle edge case where trimmed length equals original

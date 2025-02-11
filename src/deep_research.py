@@ -4,9 +4,9 @@ from dataclasses import dataclass
 import os
 from openai import OpenAI
 from firecrawl import FirecrawlApp
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from providers import o3_mini_model, trim_prompt
-from prompt import system_prompt
+from prompt import system_prompt, generate_serp_queries_prompt, generate_feedback_prompt, final_report_prompt, process_serp_result_prompt
 from dotenv import load_dotenv
 import logging, colorlog
 
@@ -19,8 +19,8 @@ if not logger.handlers:
     logger.addHandler(console_handler)
     logger.propagate = False
 
-
 load_dotenv()
+
 # Initialize Firecrawl and OpenAI client
 firecrawl = FirecrawlApp()
 client = OpenAI()
@@ -40,11 +40,11 @@ class SerpQueryResponse(BaseModel):
     queries: List[SerpQuery]
 
 class ProcessResponse(BaseModel):
-    learnings: List[str]
+    learnings: List[str] = Field(default_factory=list, description="A list of learnings from the research")
     followUpQuestions: List[str]
 
 class ReportResponse(BaseModel):
-        reportMarkdown: str
+    reportMarkdown: str
 
 class FeedbackResponse(BaseModel):
     questions: List[str]
@@ -54,12 +54,8 @@ async def generate_feedback(
     num_questions: int = 3
 ) -> List[str]:
     """Generate follow-up questions to clarify research direction."""
-    
-    prompt = f"""Given the following query from the user, ask some follow up questions to clarify the research direction. 
-    Return a maximum of {num_questions} questions, but feel free to return less if the original query is clear: 
-    <query>{query}</query>
-    
-    Respond with JSON in the format: {{"questions": ["question1", "question2", "question3"]}}"""
+
+    prompt = generate_feedback_prompt.format(query=query, num_questions=num_questions)
 
     response = client.beta.chat.completions.parse(  # Removed await
         model=o3_mini_model["model"],
@@ -84,13 +80,9 @@ async def generate_serp_queries(
         learnings: Optional[List[str]] = None
     ) -> List[SerpQuery]:
     
-    prompt = f"""Given the following prompt from the user, generate a list of SERP queries to research the topic. 
-Return a maximum of {num_queries} queries, but feel free to return less if the original prompt is clear. 
-Make sure each query is unique and not similar to each other: <prompt>{query}</prompt>
+    learnings_string =f"Here are some learnings from previous research, use them to generate more specific queries: {chr(10).join(learnings)}" if learnings else ""
 
-{f"Here are some learnings from previous research, use them to generate more specific queries: {chr(10).join(learnings)}" if learnings else ""}
-
-"""
+    prompt = generate_serp_queries_prompt.format(query=query, num_queries=num_queries, learnings_string=learnings_string)
 
     response = client.beta.chat.completions.parse(
         model=o3_mini_model["model"],
@@ -111,28 +103,20 @@ Make sure each query is unique and not similar to each other: <prompt>{query}</p
 
 async def process_serp_result(
     query: str,
-    result: List[dict],
+    contents: List[dict],
     num_learnings: int = 3,
     num_follow_up_questions: int = 3
 ) -> dict:
-    contents = [
-        trim_prompt(item.get("markdown", ""), 25_000)
-        for item in result
-        if item.get("markdown")
-    ]
-    logger.info(f"Ran {query}, found {len(contents)} contents")
-
-    prompt = f"""Given the following contents from a SERP search for the query <query>{query}</query>, 
-generate a list of learnings from the contents. Return a maximum of {num_learnings} learnings, and a list of {num_follow_up_questions} follow up questions.
-but feel free to return less if the contents are clear. Make sure each learning is unique and not similar to each other. 
-The learnings should be concise and to the point, as detailed and information dense as possible. 
-Make sure to include any entities like people, places, companies, products, things, etc in the learnings, 
-as well as any exact metrics, numbers, or dates. The learnings will be used to research the topic further.
-
-<contents>{"".join(f"<content>{content}</content>" for content in contents)}</contents>
-
-Respond with JSON in the format: {{"learnings": ["learning1", ...], "followUpQuestions": ["question1", ...]}}"""
-
+    """
+    TODO: augment urls within the result, cite URL in each learning, 
+    """
+    
+    logger.info(f"Query: {query}, \nFound {len(contents)} contents")
+    contents_string = "".join(f"<content>{content['content']}, from source {content['url']}</content>" for content in contents)
+    prompt = process_serp_result_prompt.format(query=query, 
+                                               contents_string=contents_string, 
+                                               num_learnings=num_learnings, 
+                                               num_follow_up_questions=num_follow_up_questions)
     response = client.beta.chat.completions.parse(
         model=o3_mini_model["model"],
         messages=[
@@ -161,20 +145,7 @@ async def write_final_report(
         150_000
     )
 
-    prompt = f"""Given the following prompt from the user, write a final report on the topic using the learnings from research. 
-Make it as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:
-
-<prompt>{prompt}</prompt>
-
-Here are all the learnings from previous research:
-
-<learnings>
-{learnings_string}
-</learnings>
-
-Respond with JSON in the format: {{"reportMarkdown": "# Report\\n\\n..."}}"""
-
-
+    prompt = final_report_prompt.format(prompt=prompt, learnings_string=learnings_string)
     response = client.beta.chat.completions.parse(
         model=o3_mini_model["model"],
         messages=[
@@ -216,20 +187,27 @@ async def deep_research(
                 serp_query.query,
             )
             # result is a list of dicts {'markdown': '...','metadata': {'url': '...', 'title': '...', 'source': '...'}}
-            new_urls = [item.get("metadata", {}).get("url") for item in result if item.get("metadata", {}).get("url")]
+            
+            processed_result = [
+            (item.get("metadata", {}).get("url"), trim_prompt(item.get("markdown", ""), 25_000))
+                for item in result
+                if item.get("markdown")
+            ]
+            contents = [{'index': idx, 'url': url, 'content': content} for idx, (url, content) in enumerate(processed_result)]
+
             new_breadth = breadth // 2
             new_depth = depth - 1
 
             new_learnings = await process_serp_result(
                 query=serp_query.query,
-                result=result,
+                contents=contents,
                 num_follow_up_questions=new_breadth
             )
-            
+            new_urls = [item.get("metadata", {}).get("url") for item in result if item.get("metadata", {}).get("url")]
             all_learnings = learnings + new_learnings["learnings"]
-            logger.info(f"All learnings: {all_learnings}")
             all_urls = visited_urls + new_urls
-            logger.info(f"All urls: {all_urls}")
+            logger.info(f"New learnings: {new_learnings['learnings']}")
+            logger.info(f"New urls: {new_urls}")
             if new_depth > 0:
                 logger.info(f"Researching deeper, breadth: {new_breadth}, depth: {new_depth}")
                 
