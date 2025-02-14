@@ -3,8 +3,11 @@ services:
     container_name: deep-research
     build: .
     env_file:
-      - .env.local
+      - .env
     volumes:
-      -  ./:/app/
+      - ./:/app/
+    ports:
+      - "3000:3000"
+    command: npm run server
     tty: true
     stdin_open: true
