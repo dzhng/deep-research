@@ -7,9 +7,9 @@ import { createServer } from 'http';
 import { deepResearch, writeFinalReport, type ResearchProgress } from './deep-research';
 import { generateFeedback } from './feedback';
 
-// Load environment variables from .env
+// Load environment variables from .env.local
 import { config } from 'dotenv';
-config({ path: '.env' });
+config({ path: '.env.local' });
 
 const app = express();
 app.use(cors());
