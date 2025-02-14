@@ -5,12 +5,18 @@ import { RecursiveCharacterTextSplitter } from './text-splitter';
 
 interface CustomOpenAIProviderSettings extends OpenAIProviderSettings {
   baseURL?: string;
+  headers?: Record<string, string>;
 }
 
 // Providers
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_KEY!,
-  baseURL: process.env.OPENAI_ENDPOINT || 'https://api.openai.com/v1',
+  baseURL: process.env.OPENAI_ENDPOINT || 'https://api.portkey.ai/v1',
+  headers: {
+    'x-portkey-api-key': process.env.PORTKEY_API_KEY!,
+    'x-portkey-virtual-key': process.env.PORTKEY_VIRTUAL_KEY!,
+    'x-portkey-provider': 'openai',
+  },
 } as CustomOpenAIProviderSettings);
 
 const customModel = process.env.OPENAI_MODEL || 'o3-mini';
