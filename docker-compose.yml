@@ -3,7 +3,7 @@ services:
     container_name: deep-research
     build: .
     env_file:
-      - .env.local
+      - .env
     volumes:
       - ./:/app/
     ports:
