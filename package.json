@@ -4,8 +4,8 @@
   "main": "index.ts",
   "scripts": {
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "tsx": "tsx --env-file=.env.local",
-    "start": "tsx --env-file=.env.local src/run.ts",
+    "tsx": "tsx --env-file=.env",
+    "start": "tsx --env-file=.env src/run.ts",
     "server": "tsx src/server.ts",
     "docker": "tsx src/run.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
