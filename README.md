@@ -6,6 +6,16 @@ The goal of this repo is to provide the simplest implementation of a deep resear
 
 If you like this project, please consider starring it and giving me a follow on [X/Twitter](https://x.com/dzhng). This project is sponsored by [Aomni](https://aomni.com).
 
+## Star History
+
+<a href="https://star-history.com/#dzhng/deep-research&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=dzhng/deep-research&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=dzhng/deep-research&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=dzhng/deep-research&type=Date" />
+ </picture>
+</a>
+
 ## How It Works
 
 ```mermaid
