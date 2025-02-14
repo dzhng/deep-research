@@ -6,5 +6,8 @@ services:
       - .env.local
     volumes:
       -  ./:/app/
+    ports:
+      - "3000:3000"
+    command: npm run server
     tty: true
     stdin_open: true
