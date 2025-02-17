@@ -3,6 +3,7 @@ import * as readline from 'readline';
 
 import { deepResearch, writeFinalReport } from './deep-research';
 import { generateFeedback } from './feedback';
+import { modelProvider } from './ai';
 import { OutputManager } from './output-manager';
 
 const output = new OutputManager();
@@ -28,6 +29,16 @@ function askQuestion(query: string): Promise<string> {
 
 // run the agent
 async function run() {
+  const modelChoice = await askQuestion(
+    'Select AI model (1 for OpenAI, 2 for Gemini, default 1): ',
+  );
+
+  if (modelChoice === '2') {
+    modelProvider.setProvider('gemini');
+  } else {
+    modelProvider.setProvider('openai');
+  }
+
   // Get initial query
   const initialQuery = await askQuestion('What would you like to research? ');
 

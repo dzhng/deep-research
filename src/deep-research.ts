@@ -1,10 +1,9 @@
 import FirecrawlApp, { SearchResponse } from '@mendable/firecrawl-js';
-import { generateObject } from 'ai';
 import { compact } from 'lodash-es';
 import pLimit from 'p-limit';
 import { z } from 'zod';
 
-import { o3MiniModel, trimPrompt } from './ai/providers';
+import { generateObject, trimPrompt } from './ai';
 import { systemPrompt } from './prompt';
 import { OutputManager } from './output-manager';
 
@@ -24,6 +23,16 @@ export type ResearchProgress = {
   currentQuery?: string;
   totalQueries: number;
   completedQueries: number;
+};
+
+type SerpQuery = {
+  query: string;
+  researchGoal: string;
+};
+
+type ProcessedResult = {
+  learnings: string[];
+  followUpQuestions: string[];
 };
 
 type ResearchResult = {
@@ -54,7 +63,6 @@ async function generateSerpQueries({
   learnings?: string[];
 }) {
   const res = await generateObject({
-    model: o3MiniModel,
     system: systemPrompt(),
     prompt: `Given the following prompt from the user, generate a list of SERP queries to research the topic. Return a maximum of ${numQueries} queries, but feel free to return less if the original prompt is clear. Make sure each query is unique and not similar to each other: <prompt>${query}</prompt>\n\n${
       learnings
@@ -103,7 +111,6 @@ async function processSerpResult({
   log(`Ran ${query}, found ${contents.length} contents`);
 
   const res = await generateObject({
-    model: o3MiniModel,
     abortSignal: AbortSignal.timeout(60_000),
     system: systemPrompt(),
     prompt: `Given the following contents from a SERP search for the query <query>${query}</query>, generate a list of learnings from the contents. Return a maximum of ${numLearnings} learnings, but feel free to return less if the contents are clear. Make sure each learning is unique and not similar to each other. The learnings should be concise and to the point, as detailed and information dense as possible. Make sure to include any entities like people, places, companies, products, things, etc in the learnings, as well as any exact metrics, numbers, or dates. The learnings will be used to research the topic further.\n\n<contents>${contents
@@ -145,9 +152,8 @@ export async function writeFinalReport({
   );
 
   const res = await generateObject({
-    model: o3MiniModel,
     system: systemPrompt(),
-    prompt: `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from previous research:\n\n<learnings>\n${learningsString}\n</learnings>`,
+    prompt: `Write a comprehensive research report on the following topic, incorporating ALL provided research findings. The report should be detailed, professional, and well-structured with clear sections.\n\nUser query:\n<prompt>${prompt}</prompt>\n\nResearch findings:\n<learnings>\n${learningsString}\n</learnings>\n\nGuidelines:\n- Aim for 3 or more pages of detailed content\n- Include an executive summary at the start\n- Organize findings into logical sections with clear headings\n- Synthesize and connect related learnings\n- Use professional, academic writing style\n- Format text appropriately using markdown`,
     schema: z.object({
       reportMarkdown: z
         .string()
@@ -203,7 +209,7 @@ export async function deepResearch({
   const limit = pLimit(ConcurrencyLimit);
 
   const results = await Promise.all(
-    serpQueries.map(serpQuery =>
+    serpQueries.map((serpQuery: SerpQuery) =>
       limit(async () => {
         try {
           const result = await firecrawl.search(serpQuery.query, {
@@ -280,7 +286,7 @@ export async function deepResearch({
   );
 
   return {
-    learnings: [...new Set(results.flatMap(r => r.learnings))],
-    visitedUrls: [...new Set(results.flatMap(r => r.visitedUrls))],
+    learnings: [...new Set(results.flatMap((r: ResearchResult) => r.learnings))],
+    visitedUrls: [...new Set(results.flatMap((r: ResearchResult) => r.visitedUrls))],
   };
 }
