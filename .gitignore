@@ -40,3 +40,7 @@ yarn-error.log*
 .DS_Store
 *.pem
 bun.lockb
+
+
+.nx/cache
+.nx/workspace-data

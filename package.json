@@ -3,12 +3,16 @@
   "version": "0.0.1",
   "main": "index.ts",
   "scripts": {
-    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "format": "prettier --write \"apps/backend/**/*.{ts,tsx}\"",
     "tsx": "tsx --env-file=.env.local",
-    "start": "tsx --env-file=.env.local src/run.ts",
-    "server": "tsx src/server.ts",
-    "docker": "tsx src/run.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "tsx --env-file=.env.local apps/backend/run.ts",
+    "server": "tsx apps/backend/server.ts",
+    "docker": "tsx apps/backend/run.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:backend": "tsx apps/backend/run.ts",
+    "dev:frontend": "next dev --prefix apps/frontend",
+    "build:frontend": "next build --prefix apps/frontend",
+    "start:frontend": "next start --prefix apps/frontend"
   },
   "author": "",
   "license": "ISC",
@@ -19,7 +23,8 @@
     "@types/node": "^22.13.0",
     "prettier": "^3.4.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "nx": "20.4.4"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.1.9",
@@ -39,5 +44,6 @@
   },
   "engines": {
     "node": "22.x"
-  }
+  },
+  "nx": {}
 }
