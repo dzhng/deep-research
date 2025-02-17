@@ -73,6 +73,11 @@ flowchart TB
 - **Smart Follow-up**: Generates follow-up questions to better understand research needs
 - **Comprehensive Reports**: Produces detailed markdown reports with findings and sources
 - **Concurrent Processing**: Handles multiple searches and result processing in parallel for efficiency
+- **Multiple LLM Providers**: Choose between OpenAI, Google AI, Azure OpenAI, or Mistral AI models for analysis
+- **Automated web search and content analysis**
+- **Dynamic research depth and breadth control**
+- **Follow-up question generation**
+- **Comprehensive final report generation**
 
 ## Requirements
 
@@ -80,6 +85,9 @@ flowchart TB
 - API keys for:
   - Firecrawl API (for web search and content extraction)
   - OpenAI API (for o3 mini model)
+  - Google AI API (for Google AI model)
+  - Azure OpenAI API (for Azure OpenAI integration)
+  - Mistral AI API (for Mistral AI integration)
 
 ## Setup
 
@@ -100,6 +108,10 @@ FIRECRAWL_KEY="your_firecrawl_key"
 # FIRECRAWL_BASE_URL="http://localhost:3002"
 
 OPENAI_KEY="your_openai_key"
+GOOGLE_KEY="your_google_ai_key"
+AZURE_KEY="your_azure_key"
+AZURE_RESOURCE_NAME="your_azure_resource"
+MISTRAL_KEY="your_mistral_key"
 ```
 
 To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOINT` and `OPENAI_MODEL`:
@@ -124,6 +136,25 @@ docker compose up -d
 docker exec -it deep-research npm run docker
 ```
 
+## Available Models
+
+### OpenAI
+- Default: o3-mini
+- Can be configured via OPENAI_MODEL environment variable
+
+### Google AI
+- Default: gemini-2.0-pro-exp-02-05
+- Can be configured via GOOGLE_MODEL environment variable
+
+### Azure OpenAI
+- Default: gpt-4o-mini
+- Can be configured via AZURE_MODEL environment variable
+- Requires AZURE_KEY and AZURE_RESOURCE_NAME
+
+### Mistral AI
+- Default: mistral-large-latest
+- Can be configured via MISTRAL_MODEL environment variable
+
 ## Usage
 
 Run the research assistant:
@@ -134,10 +165,11 @@ npm start
 
 You'll be prompted to:
 
-1. Enter your research query
-2. Specify research breadth (recommended: 3-10, default: 4)
-3. Specify research depth (recommended: 1-5, default: 2)
-4. Answer follow-up questions to refine the research direction
+1. Choose your preferred AI model (OpenAI, Google AI, Azure OpenAI, or Mistral)
+2. Enter your research query
+3. Specify research breadth (recommended: 3-10, default: 4)
+4. Specify research depth (recommended: 1-5, default: 2)
+5. Answer follow-up questions to refine the research direction
 
 The system will then:
 
@@ -146,7 +178,7 @@ The system will then:
 3. Recursively explore deeper based on findings
 4. Generate a comprehensive markdown report
 
-The final report will be saved as `output.md` in your working directory.
+The final report will be saved in the 'deep-research-reports' directory with a timestamped filename.
 
 ### Concurrency
 
@@ -156,12 +188,26 @@ If you have a free version, you may sometimes run into rate limit errors, you ca
 
 ### Custom endpoints and models
 
-There are 2 other optional env vars that lets you tweak the endpoint (for other OpenAI compatible APIs like OpenRouter or Gemini) as well as the model string.
+There are optional env vars that let you tweak the endpoint and model configurations for each provider:
 
 ```bash
+# OpenAI Configuration
 OPENAI_ENDPOINT="custom_endpoint"
 OPENAI_MODEL="custom_model"
+
+# Google AI Configuration
+GOOGLE_MODEL="custom_google_model"
+
+# Azure OpenAI Configuration
+AZURE_MODEL="custom_azure_model"
+
+# Mistral AI Configuration
+MISTRAL_MODEL="custom_mistral_model"
 ```
+
+## Environment Variables
+
+See `.env.example` for all available configuration options.
 
 ## How It Works
 

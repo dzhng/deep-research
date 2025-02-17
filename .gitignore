@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # Output files
-output.md
+deep-research-reports/
 
 # Dependencies
 node_modules
@@ -29,7 +29,6 @@ coverage
 out/
 build
 dist
-
 
 # Debug
 npm-debug.log*
