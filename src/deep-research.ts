@@ -1,4 +1,3 @@
-import FirecrawlApp, { SearchResponse } from '@mendable/firecrawl-js';
 import { generateObject } from 'ai';
 import { compact } from 'lodash-es';
 import pLimit from 'p-limit';
@@ -15,6 +14,88 @@ const output = new OutputManager();
 function log(...args: any[]) {
   output.log(...args);
 }
+
+// --- NEW DYNAMIC IMPORT BLOCK ---
+// Determine which crawler library to use based on the environment variable
+const crawlerType = process.env.CRAWLER || 'FIRECRAWL';
+let searchFunction: (query: string, options: any) => Promise<{ data: Array<{ markdown: string; url?: string }> }>;
+
+// If the CRAWLER env var is set to "CRAWL4AI", use the HTTP API
+if (crawlerType === 'CRAWL4AI') {
+  // Create a wrapper for the Crawl4AI HTTP API
+  const crawl4aiBaseUrl = process.env.CRAWL4AI_BASE_URL ?? 'http://localhost:11235';
+  const crawl4aiToken = process.env.CRAWL4AI_API_TOKEN ?? '';
+  
+  searchFunction = async (query: string, options: any) => {
+    const headers = {
+      'Authorization': `Bearer ${crawl4aiToken}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Submit crawl job
+    const response = await fetch(`${crawl4aiBaseUrl}/crawl`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        urls: query,
+        priority: 10,
+        // Map any relevant options from Firecrawl format to Crawl4AI format
+        ...(options.timeout && { ttl: options.timeout }),
+        ...(options.limit && { max_results: options.limit }),
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Crawl4AI API error: ${response.statusText}`);
+    }
+
+    const { task_id } = await response.json();
+    
+    // Poll for result with timeout
+    const startTime = Date.now();
+    while (true) {
+      if (Date.now() - startTime > (options.timeout || 15000)) {
+        throw new Error('Timeout waiting for Crawl4AI result');
+      }
+
+      const statusResponse = await fetch(`${crawl4aiBaseUrl}/task/${task_id}`, {
+        headers
+      });
+      
+      if (!statusResponse.ok) {
+        throw new Error(`Crawl4AI status check error: ${statusResponse.statusText}`);
+      }
+
+      const status = await statusResponse.json();
+
+      if (status.status === 'completed') {
+        // Transform Crawl4AI response to match Firecrawl's format
+        return {
+          data: [{
+            markdown: status.result.markdown,
+            url: query
+          }]
+        };
+      }
+
+      // Wait before polling again
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  };
+} else {
+  // Default to using FIRECRAWL
+  const { default: FirecrawlApp } = require('@mendable/firecrawl-js');
+  // Instantiate Firecrawl with optional API keys/URLs
+  const firecrawl = new FirecrawlApp({
+    apiKey: process.env.FIRECRAWL_KEY ?? '',
+    apiUrl: process.env.FIRECRAWL_BASE_URL,
+  });
+  searchFunction = async (query: string, options: any) => {
+    return await firecrawl.search(query, options);
+  };
+}
+
+// --- END NEW DYNAMIC IMPORT BLOCK ---
 
 export type ResearchProgress = {
   currentDepth: number;
@@ -33,13 +114,6 @@ type ResearchResult = {
 
 // increase this if you have higher API rate limits
 const ConcurrencyLimit = 2;
-
-// Initialize Firecrawl with optional API key and optional base url
-
-const firecrawl = new FirecrawlApp({
-  apiKey: process.env.FIRECRAWL_KEY ?? '',
-  apiUrl: process.env.FIRECRAWL_BASE_URL,
-});
 
 // take en user query, return a list of SERP queries
 async function generateSerpQueries({
@@ -197,7 +271,7 @@ export async function deepResearch({
   
   reportProgress({
     totalQueries: serpQueries.length,
-    currentQuery: serpQueries[0]?.query
+    currentQuery: serpQueries[0]?.query,
   });
   
   const limit = pLimit(ConcurrencyLimit);
@@ -206,7 +280,7 @@ export async function deepResearch({
     serpQueries.map(serpQuery =>
       limit(async () => {
         try {
-          const result = await firecrawl.search(serpQuery.query, {
+          const result = await searchFunction(serpQuery.query, {
             timeout: 15000,
             limit: 5,
             scrapeOptions: { formats: ['markdown'] },

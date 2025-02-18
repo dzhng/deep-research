@@ -88,22 +88,23 @@ flowchart TB
 1. Clone the repository
 2. Install dependencies:
 
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
 3. Set up environment variables in a `.env.local` file:
 
-```bash
-FIRECRAWL_KEY="your_firecrawl_key"
-# If you want to use your self-hosted Firecrawl, add the following below:
-# FIRECRAWL_BASE_URL="http://localhost:3002"
+   ```bash
+   FIRECRAWL_KEY="your_firecrawl_key"
+   # If you want to use your self-hosted Firecrawl, add the following below:
+   # FIRECRAWL_BASE_URL="http://localhost:3002"
 
-OPENAI_KEY="your_openai_key"
-```
+   OPENAI_KEY="your_openai_key"
+   ```
 
 To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOINT` and `OPENAI_MODEL`:
-- Set `OPENAI_ENDPOINT` to the address of your local server (eg."http://localhost:1234/v1")
+
+- Set `OPENAI_ENDPOINT` to the address of your local server (eg."`http://localhost:1234/v1`")
 - Set `OPENAI_MODEL` to the name of the model loaded in your local server.
 
 ### Docker
@@ -115,22 +116,23 @@ To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOIN
 
 4. Run the Docker image:
 
-```bash
-docker compose up -d
-```
+   ```bash
+   docker compose up -d
+   ```
 
 5. Execute `npm run docker` in the docker service:
-```bash
-docker exec -it deep-research npm run docker
-```
+
+   ```bash
+   docker exec -it deep-research npm run docker
+   ```
 
 ## Usage
 
 Run the research assistant:
 
-```bash
-npm start
-```
+   ```bash
+   npm start
+   ```
 
 You'll be prompted to:
 
@@ -158,10 +160,10 @@ If you have a free version, you may sometimes run into rate limit errors, you ca
 
 There are 2 other optional env vars that lets you tweak the endpoint (for other OpenAI compatible APIs like OpenRouter or Gemini) as well as the model string.
 
-```bash
-OPENAI_ENDPOINT="custom_endpoint"
-OPENAI_MODEL="custom_model"
-```
+   ```bash
+   OPENAI_ENDPOINT="custom_endpoint"
+   OPENAI_MODEL="custom_model"
+   ```
 
 ## How It Works
 
