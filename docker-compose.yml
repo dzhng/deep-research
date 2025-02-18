@@ -7,7 +7,7 @@ services:
     volumes:
       - ./:/app/
     ports:
-      - "4000:4000"
+      - "3300:3300"
     command: npm run start:backend
     tty: true
     stdin_open: true
@@ -21,8 +21,8 @@ services:
       - ./:/app/
     working_dir: /app/apps/frontend
     ports:
-      - "3000:3000"
-    command: npm run dev
+      - "3010:3010"
+    command: npm run dev -- -p 3010
     tty: true
     stdin_open: true
     depends_on:
