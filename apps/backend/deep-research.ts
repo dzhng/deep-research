@@ -123,13 +123,11 @@ async function processSerpResult({
   query,
   result,
   numLearnings = 3,
-  numFollowUpQuestions = 3,
 }: {
   query: string;
   result: SearchResponse;
   numLearnings?: number;
-  numFollowUpQuestions?: number;
-}) {
+}): Promise<{ learnings: string[] }> {
   const contents = compact(result.data.map(item => item.markdown)).map(
     content => trimPrompt(content, 25_000),
   );
@@ -153,84 +151,124 @@ async function processSerpResult({
     res.object.learnings,
   );
 
-  return res.object.learnings.slice(0, numLearnings);
+  return { learnings: res.object.learnings.slice(0, numLearnings) };
 }
 
 export async function deepResearch({
   query,
   breadth = 4,
   depth = 2,
+  learnings = [],
+  visitedUrls = [],
   onProgress,
 }: {
   query: string;
   breadth?: number;
   depth?: number;
+  learnings?: string[];
+  visitedUrls?: string[];
   onProgress?: (progress: ResearchProgress) => void;
 }): Promise<ResearchResult> {
-  const allLearnings: string[] = [];
-  const visitedUrls: string[] = [];
+  const progress: ResearchProgress = {
+    currentDepth: depth,
+    totalDepth: depth,
+    currentBreadth: breadth,
+    totalBreadth: breadth,
+    totalQueries: 0,
+    completedQueries: 0,
+  };
+
+  const reportProgress = (update: Partial<ResearchProgress>) => {
+    Object.assign(progress, update);
+    onProgress?.(progress);
+  };
+
+  const serpQueries = await generateSerpQueries({
+    query,
+    learnings,
+    numQueries: breadth,
+  });
+
+  reportProgress({
+    totalQueries: serpQueries.length,
+    currentQuery: serpQueries[0]?.query
+  });
+
   const limit = pLimit(ConcurrencyLimit);
 
-  let currentQueries = [{ query, researchGoal: 'Initial research' }];
-  let totalQueries = 0;
-  let completedQueries = 0;
+  const results = await Promise.all(
+    serpQueries.map(serpQuery =>
+      limit(async () => {
+        try {
+          const result = await firecrawl.search(serpQuery.query, {
+            timeout: 15000,
+            limit: 5,
+            scrapeOptions: { formats: ['markdown'] },
+          });
 
-  for (let d = 0; d < depth; d++) {
-    // Process queries sequentially
-    const queries = [];
-    for (const q of currentQueries) {
-      const result = await generateSerpQueries({
-        query: q.query,
-        numQueries: breadth,
-        learnings: allLearnings,
-      });
-      queries.push(result);
-    }
+          // Collect URLs from this search
+          const newUrls = compact(result.data.map(item => item.url));
+          const newBreadth = Math.ceil(breadth / 2);
+          const newDepth = depth - 1;
 
-    const flatQueries = queries.flat();
-    totalQueries += flatQueries.length;
+          const processedResult = await processSerpResult({
+            query: serpQuery.query,
+            result,
+            numLearnings: 3,
+          });
 
-    // Process search queries sequentially
-    const results = [];
-    for (const q of flatQueries) {
-      onProgress?.({
-        currentDepth: d + 1,
-        totalDepth: depth,
-        currentBreadth: completedQueries + 1,
-        totalBreadth: totalQueries,
-        currentQuery: q.query,
-        totalQueries,
-        completedQueries,
-      });
+          const allLearnings = [...learnings, ...processedResult.learnings];
+          const allUrls = [...visitedUrls, ...newUrls];
 
-      const result = await searchWithRetry(q.query);
-      completedQueries++;
+          if (newDepth > 0) {
+            log(
+              `Researching deeper, breadth: ${newBreadth}, depth: ${newDepth}`,
+            );
 
-      results.push({
-        query: q,
-        result,
-      });
-    }
+            reportProgress({
+              currentDepth: newDepth,
+              currentBreadth: newBreadth,
+              completedQueries: progress.completedQueries + 1,
+              currentQuery: serpQuery.query,
+            });
 
-    // Process results sequentially
-    const newLearnings = [];
-    for (const { query, result } of results) {
-      visitedUrls.push(...compact(result.data.map(item => item.url)));
-      const learning = await processSerpResult({
-        query: query.query,
-        result,
-        numLearnings: 3,
-      });
-      newLearnings.push(learning);
-    }
+            const nextQuery = `
+              Previous research goal: ${serpQuery.researchGoal}
+              Current learnings: ${processedResult.learnings.join('\n')}
+            `.trim();
 
-    currentQueries = flatQueries;
-    allLearnings.push(...newLearnings.flat());
-  }
+            return deepResearch({
+              query: nextQuery,
+              breadth: newBreadth,
+              depth: newDepth,
+              learnings: allLearnings,
+              visitedUrls: allUrls,
+              onProgress,
+            });
+          }
+
+          return {
+            learnings: allLearnings,
+            visitedUrls: allUrls,
+          };
+        } catch (error) {
+          log(`Error researching query "${serpQuery.query}":`, error);
+          return {
+            learnings,
+            visitedUrls,
+          };
+        }
+      }),
+    ),
+  );
+
+  // Combine all results
+  const finalLearnings = [...new Set(results.flatMap(r => r.learnings))];
+  const finalUrls = [...new Set(results.flatMap(r => r.visitedUrls))];
 
   return {
-    learnings: allLearnings,
-    visitedUrls: [...new Set(visitedUrls)],
+    learnings: finalLearnings,
+    visitedUrls: finalUrls,
   };
 }
 
@@ -248,11 +286,21 @@ export async function writeFinalReport({
     system: systemPrompt(),
     prompt: `Given the following research prompt and learnings, write a comprehensive research report. The report should be well-structured with sections and subsections. Make sure to include all relevant information from the learnings, and organize them in a logical way. Use markdown formatting.\n\nResearch Prompt: ${prompt}\n\nLearnings:\n${learnings.join(
       '\n',
-    )}\n\nSources:\n${visitedUrls.join('\n')}`,
+    )}`,
     schema: z.object({
       report: z.string().describe('The final research report in markdown format'),
     }),
   });
 
-  return res.object.report;
+  // Append citations section to the report
+  const citationsSection = `
+
+## Citations and Sources
+
+The following sources were used in this research:
+
+${visitedUrls.map((url, index) => `${index + 1}. ${url}`).join('\n')}
+`;
+
+  return res.object.report + citationsSection;
 }
