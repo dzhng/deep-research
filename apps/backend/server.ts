@@ -20,10 +20,13 @@ const server = createServer(app);
 
 // Create WebSocket server
 const wss = new WebSocketServer({ noServer: true });
+console.log('WebSocket server created');
 
 // Handle upgrade requests
 server.on('upgrade', (request, socket, head) => {
+  console.log('Received upgrade request for WebSocket connection');
   wss.handleUpgrade(request, socket, head, (ws) => {
+    console.log('WebSocket connection upgraded successfully');
     wss.emit('connection', ws, request);
   });
 });
@@ -54,20 +57,27 @@ type WSMessage = {
 
 // Handle WebSocket connections
 wss.on('connection', (ws) => {
+  console.log('New WebSocket connection established');
+  
   ws.on('message', (data) => {
+    console.log('Received WebSocket message:', data.toString());
     try {
       const message = JSON.parse(data.toString()) as WSMessage;
+      console.log('Parsed WebSocket message:', message);
       
       if (message.type === 'subscribe') {
+        console.log(`Client subscribing to research session: ${message.researchId}`);
         // Add client to research session subscribers
         if (!wsClients.has(message.researchId)) {
           wsClients.set(message.researchId, new Set());
         }
         wsClients.get(message.researchId)?.add(ws);
+        console.log(`Client added to session ${message.researchId}`);
         
         // Send initial state if session exists
         const session = sessions.get(message.researchId);
         if (session) {
+          console.log(`Sending initial state for session ${message.researchId}`);
           ws.send(JSON.stringify({
             type: 'state',
             data: {
@@ -79,15 +89,30 @@ wss.on('connection', (ws) => {
           }));
         }
       } else if (message.type === 'unsubscribe') {
+        console.log(`Client unsubscribing from research session: ${message.researchId}`);
         // Remove client from research session subscribers
         wsClients.get(message.researchId)?.delete(ws);
       }
     } catch (error) {
       console.error('Error processing WebSocket message:', error);
+      // Send error message back to client
+      try {
+        ws.send(JSON.stringify({
+          type: 'error',
+          error: 'Failed to process message'
+        }));
+      } catch (sendError) {
+        console.error('Failed to send error message to client:', sendError);
+      }
     }
   });
   
-  ws.on('close', () => {
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+  });
+  
+  ws.on('close', (code, reason) => {
+    console.log(`WebSocket connection closed. Code: ${code}, Reason: ${reason}`);
     // Remove client from all research sessions
     for (const clients of wsClients.values()) {
       clients.delete(ws);
@@ -297,7 +322,16 @@ ${session.followUpQuestions.map((q, i) => `Q: ${q}\nA: ${session.answers?.[i] ||
   }
 }
 
-const port = process.env.PORT || 3000;
-server.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+// Start the server
+const PORT = process.env.PORT || 3300;
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+  console.log(`WebSocket server is ready for connections`);
 });
+
+// Handle server errors
+server.on('error', (error) => {
+  console.error('Server error:', error);
+});
+
+export { app, server };

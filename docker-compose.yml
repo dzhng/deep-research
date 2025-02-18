@@ -8,7 +8,7 @@ services:
       - ./:/app/
     ports:
       - "3300:3300"
-    command: npm run start:backend
+    command: npx tsx apps/backend/server.ts
     tty: true
     stdin_open: true
 
