@@ -1,13 +1,29 @@
 services:
-  deep-research:
-    container_name: deep-research
+  backend:
+    container_name: backend
     build: .
     env_file:
-      - .env.local
+      - .env
     volumes:
-      -  ./:/app/
+      - ./:/app/
     ports:
-      - "3000:3000"
-    command: npm run server
+      - "3300:3300"
+    command: npx tsx apps/backend/server.ts
     tty: true
     stdin_open: true
+
+  frontend:
+    container_name: frontend
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./:/app/
+    working_dir: /app/apps/frontend
+    ports:
+      - "3010:3010"
+    command: npm run dev -- -p 3010
+    tty: true
+    stdin_open: true
+    depends_on:
+      - backend

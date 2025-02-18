@@ -1,9 +1,11 @@
 import * as fs from 'fs/promises';
 import * as readline from 'readline';
+import dotenv from 'dotenv';
+dotenv.config();
 
 import { deepResearch, writeFinalReport } from './deep-research';
 import { generateFeedback } from './feedback';
-import { OutputManager } from './output-manager';
+import { OutputManager } from '../../libs/shared/output-manager';
 
 const output = new OutputManager();
 

@@ -4,9 +4,9 @@ import { compact } from 'lodash-es';
 import pLimit from 'p-limit';
 import { z } from 'zod';
 
-import { o3MiniModel, trimPrompt } from './ai/providers';
+import { o3MiniModel, trimPrompt } from '../../libs/shared/providers';
 import { systemPrompt } from './prompt';
-import { OutputManager } from './output-manager';
+import { OutputManager } from '../../libs/shared/output-manager';
 
 // Initialize output manager for coordinated console/progress output
 const output = new OutputManager();
@@ -40,6 +40,39 @@ const firecrawl = new FirecrawlApp({
   apiKey: process.env.FIRECRAWL_KEY ?? '',
   apiUrl: process.env.FIRECRAWL_BASE_URL,
 });
+
+interface FirecrawlError {
+  response?: {
+    status: number;
+  };
+}
+
+// Retry configuration
+const MAX_RETRIES = 5;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+
+// Rate limit configuration
+const RATE_LIMIT_DELAY = 6000; // 6 seconds between requests
+
+async function searchWithRetry(query: string): Promise<SearchResponse> {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      // Add delay before each request
+      await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
+      return await firecrawl.search(query);
+    } catch (error) {
+      const fcError = error as FirecrawlError;
+      if (fcError.response?.status === 429) { // Rate limit error
+        const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+        log(`Rate limit hit, retrying in ${delay/1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Max retries reached');
+}
 
 // take en user query, return a list of SERP queries
 async function generateSerpQueries({
@@ -90,13 +123,11 @@ async function processSerpResult({
   query,
   result,
   numLearnings = 3,
-  numFollowUpQuestions = 3,
 }: {
   query: string;
   result: SearchResponse;
   numLearnings?: number;
-  numFollowUpQuestions?: number;
-}) {
+}): Promise<{ learnings: string[] }> {
   const contents = compact(result.data.map(item => item.markdown)).map(
     content => trimPrompt(content, 25_000),
   );
@@ -112,12 +143,7 @@ async function processSerpResult({
     schema: z.object({
       learnings: z
         .array(z.string())
-        .describe(`List of learnings, max of ${numLearnings}`),
-      followUpQuestions: z
-        .array(z.string())
-        .describe(
-          `List of follow-up questions to research the topic further, max of ${numFollowUpQuestions}`,
-        ),
+        .describe('List of learnings extracted from the contents.'),
     }),
   });
   log(
@@ -125,52 +151,20 @@ async function processSerpResult({
     res.object.learnings,
   );
 
-  return res.object;
-}
-
-export async function writeFinalReport({
-  prompt,
-  learnings,
-  visitedUrls,
-}: {
-  prompt: string;
-  learnings: string[];
-  visitedUrls: string[];
-}) {
-  const learningsString = trimPrompt(
-    learnings
-      .map(learning => `<learning>\n${learning}\n</learning>`)
-      .join('\n'),
-    150_000,
-  );
-
-  const res = await generateObject({
-    model: o3MiniModel,
-    system: systemPrompt(),
-    prompt: `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from previous research:\n\n<learnings>\n${learningsString}\n</learnings>`,
-    schema: z.object({
-      reportMarkdown: z
-        .string()
-        .describe('Final report on the topic in Markdown'),
-    }),
-  });
-
-  // Append the visited URLs section to the report
-  const urlsSection = `\n\n## Sources\n\n${visitedUrls.map(url => `- ${url}`).join('\n')}`;
-  return res.object.reportMarkdown + urlsSection;
+  return { learnings: res.object.learnings.slice(0, numLearnings) };
 }
 
 export async function deepResearch({
   query,
-  breadth,
-  depth,
+  breadth = 4,
+  depth = 2,
   learnings = [],
   visitedUrls = [],
   onProgress,
 }: {
   query: string;
-  breadth: number;
-  depth: number;
+  breadth?: number;
+  depth?: number;
   learnings?: string[];
   visitedUrls?: string[];
   onProgress?: (progress: ResearchProgress) => void;
@@ -183,7 +177,7 @@ export async function deepResearch({
     totalQueries: 0,
     completedQueries: 0,
   };
-  
+
   const reportProgress = (update: Partial<ResearchProgress>) => {
     Object.assign(progress, update);
     onProgress?.(progress);
@@ -194,12 +188,12 @@ export async function deepResearch({
     learnings,
     numQueries: breadth,
   });
-  
+
   reportProgress({
     totalQueries: serpQueries.length,
     currentQuery: serpQueries[0]?.query
   });
-  
+
   const limit = pLimit(ConcurrencyLimit);
 
   const results = await Promise.all(
@@ -217,12 +211,13 @@ export async function deepResearch({
           const newBreadth = Math.ceil(breadth / 2);
           const newDepth = depth - 1;
 
-          const newLearnings = await processSerpResult({
+          const processedResult = await processSerpResult({
             query: serpQuery.query,
             result,
-            numFollowUpQuestions: newBreadth,
+            numLearnings: 3,
           });
-          const allLearnings = [...learnings, ...newLearnings.learnings];
+
+          const allLearnings = [...learnings, ...processedResult.learnings];
           const allUrls = [...visitedUrls, ...newUrls];
 
           if (newDepth > 0) {
@@ -238,9 +233,9 @@ export async function deepResearch({
             });
 
             const nextQuery = `
-            Previous research goal: ${serpQuery.researchGoal}
-            Follow-up research directions: ${newLearnings.followUpQuestions.map(q => `\n${q}`).join('')}
-          `.trim();
+              Previous research goal: ${serpQuery.researchGoal}
+              Current learnings: ${processedResult.learnings.join('\n')}
+            `.trim();
 
             return deepResearch({
               query: nextQuery,
@@ -250,37 +245,62 @@ export async function deepResearch({
               visitedUrls: allUrls,
               onProgress,
             });
-          } else {
-            reportProgress({
-              currentDepth: 0,
-              completedQueries: progress.completedQueries + 1,
-              currentQuery: serpQuery.query,
-            });
-            return {
-              learnings: allLearnings,
-              visitedUrls: allUrls,
-            };
           }
-        } catch (e: any) {
-          if (e.message && e.message.includes('Timeout')) {
-            log(
-              `Timeout error running query: ${serpQuery.query}: `,
-              e,
-            );
-          } else {
-            log(`Error running query: ${serpQuery.query}: `, e);
-          }
+
           return {
-            learnings: [],
-            visitedUrls: [],
+            learnings: allLearnings,
+            visitedUrls: allUrls,
+          };
+        } catch (error) {
+          log(`Error researching query "${serpQuery.query}":`, error);
+          return {
+            learnings,
+            visitedUrls,
           };
         }
       }),
     ),
   );
 
+  // Combine all results
+  const finalLearnings = [...new Set(results.flatMap(r => r.learnings))];
+  const finalUrls = [...new Set(results.flatMap(r => r.visitedUrls))];
+
   return {
-    learnings: [...new Set(results.flatMap(r => r.learnings))],
-    visitedUrls: [...new Set(results.flatMap(r => r.visitedUrls))],
+    learnings: finalLearnings,
+    visitedUrls: finalUrls,
   };
+}
+
+export async function writeFinalReport({
+  prompt,
+  learnings,
+  visitedUrls,
+}: {
+  prompt: string;
+  learnings: string[];
+  visitedUrls: string[];
+}): Promise<string> {
+  const res = await generateObject({
+    model: o3MiniModel,
+    system: systemPrompt(),
+    prompt: `Given the following research prompt and learnings, write a comprehensive research report. The report should be well-structured with sections and subsections. Make sure to include all relevant information from the learnings, and organize them in a logical way. Use markdown formatting.\n\nResearch Prompt: ${prompt}\n\nLearnings:\n${learnings.join(
+      '\n',
+    )}`,
+    schema: z.object({
+      report: z.string().describe('The final research report in markdown format'),
+    }),
+  });
+
+  // Append citations section to the report
+  const citationsSection = `
+
+## Citations and Sources
+
+The following sources were used in this research:
+
+${visitedUrls.map((url, index) => `${index + 1}. ${url}`).join('\n')}
+`;
+
+  return res.object.report + citationsSection;
 }
