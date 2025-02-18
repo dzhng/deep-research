@@ -189,4 +189,4 @@ OPENAI_MODEL="custom_model"
 
 ## License
 
-MIT License - feel free to use and modify as needed.
+MIT License - feel free to use and modify as needed. Creative Commons Attribution 4.0 International License
