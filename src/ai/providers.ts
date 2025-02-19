@@ -1,4 +1,5 @@
 import { createOpenAI, type OpenAIProviderSettings } from '@ai-sdk/openai';
+import { createAzure } from '@ai-sdk/azure';
 import { getEncoding } from 'js-tiktoken';
 
 import { RecursiveCharacterTextSplitter } from './text-splitter';
@@ -8,16 +9,21 @@ interface CustomOpenAIProviderSettings extends OpenAIProviderSettings {
 }
 
 // Providers
-const openai = createOpenAI({
-  apiKey: process.env.OPENAI_KEY!,
-  baseURL: process.env.OPENAI_ENDPOINT || 'https://api.openai.com/v1',
-} as CustomOpenAIProviderSettings);
+const provider = (process.env.AZURE_OPENAI || 'false') === 'true'
+  ? createAzure({
+      resourceName: process.env.AZURE_RESOURCE_NAME!,
+      apiKey: process.env.AZURE_API_KEY!,
+      apiVersion: process.env.AZURE_API_VERSION || '2024-12-01-preview',
+    })
+  : createOpenAI({
+      apiKey: process.env.OPENAI_KEY!,
+      baseURL: process.env.OPENAI_ENDPOINT || 'https://api.openai.com/v1',
+    } as CustomOpenAIProviderSettings);
 
 const customModel = process.env.OPENAI_MODEL || 'o3-mini';
 
 // Models
-
-export const o3MiniModel = openai(customModel, {
+export const o3MiniModel = provider(customModel, {
   reasoningEffort: customModel.startsWith('o') ? 'medium' : undefined,
   structuredOutputs: true,
 });

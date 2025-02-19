@@ -99,7 +99,15 @@ FIRECRAWL_KEY="your_firecrawl_key"
 # If you want to use your self-hosted Firecrawl, add the following below:
 # FIRECRAWL_BASE_URL="http://localhost:3002"
 
+# OpenAI Configuration
 OPENAI_KEY="your_openai_key"
+
+# Azure OpenAI Configuration (Optional)
+# To use Azure OpenAI, set these variables:
+AZURE_OPENAI=true
+AZURE_RESOURCE_NAME="your-resource-name" # From Azure portal, e.g. for this endpoint https://myorg-swedencentral.openai.azure.com/openai/deployments/o3-mini/chat/completions?api-version=2024-12-01-preview use "myorg-swedencentral"
+AZURE_API_KEY="your-api-key" # From Azure portal > Keys and Endpoint > Key 1 or Key 2
+AZURE_API_VERSION="2024-12-01-preview" # From Target URI in Endpoint section end (NOT in Deployment Info section, it's wrong), e.g. for this uri https://myorg-swedencentral.openai.azure.com/openai/deployments/o3-mini/chat/completions?api-version=2024-12-01-preview use 2024-12-01-preview
 ```
 
 To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOINT` and `OPENAI_MODEL`:

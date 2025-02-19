@@ -21,6 +21,7 @@
     "typescript": "^5.7.3"
   },
   "dependencies": {
+    "@ai-sdk/azure": "^1.1.13",
     "@ai-sdk/openai": "^1.1.9",
     "@mendable/firecrawl-js": "^1.16.0",
     "ai": "^4.1.17",
