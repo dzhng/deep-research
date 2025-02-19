@@ -80,6 +80,7 @@ flowchart TB
 - API keys for:
   - Firecrawl API (for web search and content extraction)
   - OpenAI API (for o3 mini model)
+  - Admin API Key (for API key generation endpoint security)
 
 ## Setup
 
@@ -123,6 +124,27 @@ docker compose up -d
 ```bash
 docker exec -it deep-research npm run docker
 ```
+
+### Environment Variables
+
+1. Copy `.env.sample` to `.env`
+2. Set up the required API keys:
+
+```env
+# Search and LLM APIs
+FIRECRAWL_KEY="your_firecrawl_key"
+OPENAI_KEY="your_openai_key"
+
+# Security: API Key Generation
+# Generate a secure random string for protecting the API key generation endpoint
+# You can use: node -e "console.log('sk_' + require('crypto').randomBytes(24).toString('base64').replace(/[+/=]/g, ''))"
+KEY_GEN_API_KEY="your_admin_api_key"
+```
+
+The `KEY_GEN_API_KEY` is a crucial security measure that protects the API key generation endpoint. This admin API key is required when calling the endpoint to generate new user API keys. Make sure to:
+1. Generate a secure random string for this key
+2. Keep it private and only share with authorized administrators
+3. Use different keys for development and production environments
 
 ## Usage
 
@@ -190,3 +212,248 @@ OPENAI_MODEL="custom_model"
 ## License
 
 MIT License - feel free to use and modify as needed.
+
+## API Endpoints
+
+### Generate API Key
+Generate a unique API key for a user. This endpoint is secured and requires an admin API key.
+
+```bash
+curl -X POST http://localhost:3300/api/generate-api-key \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: YOUR_ADMIN_API_KEY" \
+  -d '{"username": "user123"}'
+```
+
+Response:
+```json
+{
+  "userId": "user123_a1b2c3d4",
+  "apiKey": "sk_xxxxxxxxxxxxx"
+}
+```
+
+### Research Endpoints
+
+#### Initiate Research
+Start a new research session:
+```bash
+POST /api/research/initiate
+```
+
+#### Submit Answers
+Submit answers to follow-up questions:
+```bash
+POST /api/research/submit-answers
+```
+
+#### Get Research Status
+Check the status of a research session:
+```bash
+GET /api/research/:researchId/status
+```
+
+## Security
+
+### API Key Generation Security
+The system implements a two-tier API key structure:
+1. Admin API Key (`KEY_GEN_API_KEY`):
+   - Required to access the API key generation endpoint
+   - Should be kept secure and only used by administrators
+   - Used in the `x-api-key` header when calling the generate-api-key endpoint
+
+2. User API Keys:
+   - Generated through the secure endpoint
+   - Unique to each user
+   - Format: `sk_` prefix followed by random bytes
+   - Used for accessing the research endpoints
+
+Example of generating a new user API key:
+```bash
+# Replace YOUR_ADMIN_API_KEY with your KEY_GEN_API_KEY value
+curl -X POST http://localhost:3300/api/generate-api-key \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: YOUR_ADMIN_API_KEY" \
+  -d '{"username": "user123"}'
+```
+
+## Development
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Start the development server:
+```
+
+## Backend Architecture & Testing
+
+### Overview
+
+The backend implements a hybrid HTTP/WebSocket architecture:
+- HTTP endpoints for API key management and initiating research
+- WebSocket connections for real-time research progress updates
+
+```mermaid
+flowchart TB
+    subgraph Client
+        HTTP[HTTP Requests]
+        WS[WebSocket Connection]
+    end
+
+    subgraph Server
+        EP[HTTP Endpoints]
+        WSS[WebSocket Server]
+        RM[Research Manager]
+        DB[(Database)]
+    end
+
+    HTTP --> EP
+    WS --> WSS
+    EP --> RM
+    WSS --> RM
+    RM --> DB
+```
+
+### Testing with cURL
+
+1. First, generate an API key:
+```bash
+# Generate an API key for a new user
+curl -X POST http://localhost:3300/api/generate-api-key \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: YOUR_ADMIN_API_KEY" \
+  -d '{"username": "testuser"}'
+
+# Response will contain userId and apiKey
+# {
+#   "userId": "testuser_a1b2c3d4",
+#   "apiKey": "sk_xxxxxxxxxxxxx"
+# }
+```
+
+2. Initiate a research session:
+```bash
+# Start a new research session
+curl -X POST http://localhost:3300/api/research/initiate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_USER_API_KEY" \
+  -d '{
+    "query": "What are the latest developments in quantum computing?",
+    "breadth": 4,
+    "depth": 2
+  }'
+
+# Response will contain researchId and followUpQuestions
+# {
+#   "researchId": "abc123xyz",
+#   "followUpQuestions": [...]
+# }
+```
+
+3. Submit answers to follow-up questions:
+```bash
+curl -X POST http://localhost:3300/api/research/submit-answers \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_USER_API_KEY" \
+  -d '{
+    "researchId": "abc123xyz",
+    "answers": [
+      "Answer to question 1",
+      "Answer to question 2"
+    ]
+  }'
+```
+
+4. Check research status:
+```bash
+curl http://localhost:3300/api/research/abc123xyz/status \
+  -H "Authorization: Bearer YOUR_USER_API_KEY"
+```
+
+### Testing WebSocket Connection
+
+You can use `wscat` to test WebSocket connections:
+
+1. Install wscat:
+```bash
+npm install -g wscat
+```
+
+2. Connect to the WebSocket server:
+```bash
+wscat -c ws://localhost:3300
+```
+
+3. Subscribe to research updates:
+```json
+{
+  "type": "subscribe",
+  "researchId": "abc123xyz"
+}
+```
+
+You'll receive real-time updates about:
+- Research progress
+- New findings
+- Status changes
+- Completion or errors
+
+Example WebSocket messages:
+
+```json
+// Progress update
+{
+  "type": "update",
+  "data": {
+    "status": "in_progress",
+    "progress": {
+      "currentDepth": 2,
+      "totalDepth": 2,
+      "currentBreadth": 4,
+      "totalBreadth": 4,
+      "completedQueries": 3,
+      "totalQueries": 8
+    }
+  }
+}
+
+// Completion message
+{
+  "type": "update",
+  "data": {
+    "status": "completed",
+    "result": {
+      "learnings": [...],
+      "visitedUrls": [...],
+      "report": "..."
+    }
+  }
+}
+```
+
+### Backend Components
+
+1. **HTTP Server (Express)**
+   - Handles API key generation and management
+   - Manages research session initialization
+   - Processes follow-up question answers
+   - Provides research status updates
+
+2. **WebSocket Server**
+   - Maintains real-time connections with clients
+   - Broadcasts research progress updates
+   - Manages client subscriptions to research sessions
+   - Handles connection lifecycle (connect, disconnect, errors)
+
+3. **Research Manager**
+   - Coordinates the deep research process
+   - Manages concurrent research sessions
+   - Handles query generation and result processing
+   - Updates progress and notifies subscribers
+
+4. **Database Layer**
+   - Stores user information and API keys
+   - Manages research session data
+   - Handles concurrent access and updates

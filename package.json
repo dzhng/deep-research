@@ -21,10 +21,10 @@
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^22.13.0",
+    "nx": "20.4.4",
     "prettier": "^3.4.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3",
-    "nx": "20.4.4"
+    "typescript": "^5.7.3"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.1.9",
@@ -39,6 +39,9 @@
     "js-tiktoken": "^1.0.17",
     "lodash-es": "^4.17.21",
     "p-limit": "^6.2.0",
+    "sequelize": "^6.37.5",
+    "sqlite3": "^5.1.7",
+    "uuid": "^11.0.5",
     "ws": "^8.18.0",
     "zod": "^3.24.1"
   },

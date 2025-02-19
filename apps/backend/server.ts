@@ -6,6 +6,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import { deepResearch, writeFinalReport, type ResearchProgress } from './deep-research';
 import { generateFeedback } from './feedback';
+import { generateApiKeyForUser } from './database/database';
 
 // Load environment variables from .env.local
 import { config } from 'dotenv';
@@ -161,6 +162,16 @@ function generateId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
+// Middleware to verify KEY_GEN_API_KEY
+const verifyKeyGenApiKey: RequestHandler = (req, res, next) => {
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey || apiKey !== process.env.KEY_GEN_API_KEY) {
+    res.status(401).json({ error: 'Unauthorized: Invalid API key' });
+    return;
+  }
+  next();
+};
+
 // Initiate research endpoint
 const initiateResearch: RequestHandler = async (req, res) => {
   try {
@@ -260,6 +271,29 @@ const getResearchStatus: RequestHandler<{ researchId: string }> = (req, res) => 
 app.post('/api/research/initiate', initiateResearch);
 app.post('/api/research/submit-answers', submitAnswers);
 app.get('/api/research/:researchId/status', getResearchStatus);
+
+app.post('/api/generate-api-key', verifyKeyGenApiKey, async (req, res) => {
+  const { username } = req.body;
+  console.log('\n=== Generating API Key ===');
+  console.log('Request received for username:', username);
+  
+  try {
+    const user = await generateApiKeyForUser(username);
+    const response = {
+      userId: user.get('userId'),
+      apiKey: user.get('apiKey'),
+    };
+    
+    console.log('Successfully generated API key');
+    console.log('Response:', response);
+    console.log('======================\n');
+    
+    res.json(response);
+  } catch (error) {
+    console.error('Error generating API key:', error);
+    res.status(500).json({ error: 'Failed to generate API key' });
+  }
+});
 
 async function startResearch(session: ResearchSession) {
   try {
