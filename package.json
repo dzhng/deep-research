@@ -24,6 +24,8 @@
     "@ai-sdk/openai": "^1.1.9",
     "@mendable/firecrawl-js": "^1.16.0",
     "ai": "^4.1.17",
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
     "js-tiktoken": "^1.0.17",
     "lodash-es": "^4.17.21",
     "p-limit": "^6.2.0",

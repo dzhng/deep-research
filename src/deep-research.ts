@@ -1,4 +1,5 @@
 import FirecrawlApp, { SearchResponse } from '@mendable/firecrawl-js';
+import search from './duckduckgo-search';
 import { generateObject } from 'ai';
 import { compact } from 'lodash-es';
 import pLimit from 'p-limit';
@@ -206,11 +207,23 @@ export async function deepResearch({
     serpQueries.map(serpQuery =>
       limit(async () => {
         try {
-          const result = await firecrawl.search(serpQuery.query, {
+          let result = await firecrawl.search(serpQuery.query, {
             timeout: 15000,
             limit: 5,
             scrapeOptions: { formats: ['markdown'] },
           });
+
+          // If the result is empty, use the DuckDuckGo search as a fallback
+          if (result.data.length === 0) {
+            log(
+              `No results found for ${serpQuery.query}, falling back to DuckDuckGo search`,
+            );
+            result = await search(serpQuery.query, {
+              timeout: 15000,
+              limit: 5,
+              scrapeOptions: { formats: ['markdown'] },
+            });
+          }
 
           // Collect URLs from this search
           const newUrls = compact(result.data.map(item => item.url));
