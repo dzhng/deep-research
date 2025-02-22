@@ -30,7 +30,7 @@ function askQuestion(query: string): Promise<string> {
 async function run() {
   // Get initial query
   const initialQuery = await askQuestion('What would you like to research? ');
-
+  const outputFile = 'output.md';
   // Get breath and depth parameters
   const breadth =
     parseInt(
@@ -45,7 +45,10 @@ async function run() {
       10,
     ) || 2;
 
-  log(`Creating research plan...`);
+  const inittext = `Research starting at ${new Date().toISOString()} with breadth ${breadth} and depth ${depth}.`;
+
+  await fs.writeFile(outputFile, inittext, 'utf-8');
+  log(`${inittext}\nCreating research plan...`);
 
   // Generate follow-up questions
   const followUpQuestions = await generateFeedback({
@@ -69,6 +72,7 @@ Initial Query: ${initialQuery}
 Follow-up Questions and Answers:
 ${followUpQuestions.map((q: string, i: number) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
 `;
+  await fs.appendFile(outputFile, combinedQuery, 'utf-8');
 
   log('\nResearching your topic...');
 
@@ -83,23 +87,23 @@ ${followUpQuestions.map((q: string, i: number) => `Q: ${q}\nA: ${answers[i]}`).j
     },
   });
 
-  log(`\n\nLearnings:\n\n${learnings.join('\n')}`);
-  log(
-    `\n\nVisited URLs (${visitedUrls.length}):\n\n${visitedUrls.join('\n')}`,
-  );
+  const URLsandLearnings = `\n\nLearnings:\n\n${learnings.join('\n')}\n\nVisited URLs (${visitedUrls.length}):\n\n${visitedUrls.join('\n')}\n`;
+  await fs.appendFile(outputFile, URLsandLearnings, 'utf-8');
+
+  log(URLsandLearnings);
   log('Writing final report...');
 
-  const report = await writeFinalReport({
+  const report = `\n\nFinal Report:\n\n${await writeFinalReport({
     prompt: combinedQuery,
     learnings,
     visitedUrls,
-  });
+  })}` 
 
   // Save report to file
-  await fs.writeFile('output.md', report, 'utf-8');
+  await fs.appendFile(outputFile, report, 'utf-8');
 
-  console.log(`\n\nFinal Report:\n\n${report}`);
-  console.log('\nReport has been saved to output.md');
+  console.log(report);
+  console.log(`\nReport has been saved to ${outputFile}`);
   rl.close();
 }
 

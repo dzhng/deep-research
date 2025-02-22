@@ -2,6 +2,7 @@
 
 # Output files
 output.md
+downloaded-urls
 
 # Dependencies
 node_modules
