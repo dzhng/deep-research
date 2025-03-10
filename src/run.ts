@@ -51,7 +51,7 @@ async function run() {
   const isReport =
     (await askQuestion(
       'Do you want to generate a long report or a specific answer? (report/answer, default report): ',
-    )) === 'report';
+    )) !== 'answer';
 
   let combinedQuery = initialQuery;
   if (isReport) {
