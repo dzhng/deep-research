@@ -8,6 +8,7 @@ import {
   writeFinalReport,
 } from './deep-research';
 import { generateFeedback } from './feedback';
+import { generateTopic, generateSummary } from './topic';
 
 // Helper function for consistent logging
 function log(...args: any[]) {
@@ -79,6 +80,22 @@ Initial Query: ${initialQuery}
 Follow-up Questions and Answers:
 ${followUpQuestions.map((q: string, i: number) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
 `;
+
+  // generate topic for research
+  const researchTopic = await generateTopic({
+    combinedQuery: combinedQuery
+  })
+
+  // generate online content summary for research
+  const summary = await generateSummary({
+    topic: researchTopic
+  })
+
+  combinedQuery = `
+  Topic: ${researchTopic}
+  Summary: ${summary}
+  ${combinedQuery}
+  `
   }
 
   log('\nStarting research...\n');

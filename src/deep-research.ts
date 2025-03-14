@@ -31,7 +31,7 @@ const ConcurrencyLimit = 2;
 
 // Initialize Firecrawl with optional API key and optional base url
 
-const firecrawl = new FirecrawlApp({
+export const firecrawl = new FirecrawlApp({
   apiKey: process.env.FIRECRAWL_KEY ?? '',
   apiUrl: process.env.FIRECRAWL_BASE_URL,
 });
