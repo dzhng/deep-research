@@ -112,7 +112,7 @@ To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOIN
 1. Clone the repository
 2. Rename `.env.example` to `.env.local` and set your API keys
 
-3. Run `npm install`
+3. Run `docker build -f Dockerfile`
 
 4. Run the Docker image:
 
