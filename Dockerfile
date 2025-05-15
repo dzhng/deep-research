@@ -4,11 +4,9 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --include=dev
+RUN npm install
 
 COPY . .
-
-ENV NODE_ENV=development
 
 COPY .env.local .env.local
 
