@@ -2,10 +2,15 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY . .
-COPY package.json ./
-COPY .env.local ./.env.local
+COPY package*.json ./
 
-RUN npm install
+RUN npm install --include=dev
+
+COPY . .
+
+ENV NODE_ENV=development
+
+COPY .env.local .env.local
 
 CMD ["npm", "run", "docker"]
+
