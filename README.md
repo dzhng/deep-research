@@ -120,12 +120,6 @@ To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOIN
 docker compose up -d
 ```
 
-5. Execute `npm run docker` in the docker service:
-
-```bash
-docker exec -it deep-research npm run docker
-```
-
 ## Usage
 
 Run the research assistant:
