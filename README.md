@@ -1,82 +1,18 @@
 # Open Deep Research
 
-An AI-powered research assistant that performs iterative, deep research on any topic by combining search engines, web scraping, and large language models.
-
-The goal of this repo is to provide the simplest implementation of a deep research agent - e.g. an agent that can refine its research direction over time and deep dive into a topic. Goal is to keep the repo size at <500 LoC so it is easy to understand and build on top of.
-
-If you like this project, please consider starring it and giving me a follow on [X/Twitter](https://x.com/dzhng). This project is sponsored by [Aomni](https://aomni.com).
-
-## How It Works
-
-```mermaid
-flowchart TB
-    subgraph Input
-        Q[User Query]
-        B[Breadth Parameter]
-        D[Depth Parameter]
-    end
-
-    DR[Deep Research] -->
-    SQ[SERP Queries] -->
-    PR[Process Results]
-
-    subgraph Results[Results]
-        direction TB
-        NL((Learnings))
-        ND((Directions))
-    end
-
-    PR --> NL
-    PR --> ND
-
-    DP{depth > 0?}
-
-    RD["Next Direction:
-    - Prior Goals
-    - New Questions
-    - Learnings"]
-
-    MR[Markdown Report]
-
-    %% Main Flow
-    Q & B & D --> DR
-
-    %% Results to Decision
-    NL & ND --> DP
-
-    %% Circular Flow
-    DP -->|Yes| RD
-    RD -->|New Context| DR
-
-    %% Final Output
-    DP -->|No| MR
-
-    %% Styling
-    classDef input fill:#7bed9f,stroke:#2ed573,color:black
-    classDef process fill:#70a1ff,stroke:#1e90ff,color:black
-    classDef recursive fill:#ffa502,stroke:#ff7f50,color:black
-    classDef output fill:#ff4757,stroke:#ff6b81,color:black
-    classDef results fill:#a8e6cf,stroke:#3b7a57,color:black
-
-    class Q,B,D input
-    class DR,SQ,PR process
-    class DP,RD recursive
-    class MR output
-    class NL,ND results
-```
+An open-source tool for thorough internet research with LLMs and web crawling.
 
 ## Features
 
-- **Iterative Research**: Performs deep research by iteratively generating search queries, processing results, and diving deeper based on findings
-- **Intelligent Query Generation**: Uses LLMs to generate targeted search queries based on research goals and previous findings
-- **Depth & Breadth Control**: Configurable parameters to control how wide (breadth) and deep (depth) the research goes
-- **Smart Follow-up**: Generates follow-up questions to better understand research needs
-- **Comprehensive Reports**: Produces detailed markdown reports with findings and sources
-- **Concurrent Processing**: Handles multiple searches and result processing in parallel for efficiency
+- In-depth web-based research
+- Recursive exploration based on initial learnings
+- Comprehensive reporting
+- Breadth and depth configuration
+- Direct Notion export support
 
 ## Requirements
 
-- Node.js environment
+- Node.js v18 or newer
 - API keys for:
   - Firecrawl API (for web search and content extraction)
   - OpenAI API (for o3 mini model)
@@ -175,29 +111,71 @@ OPENAI_ENDPOINT="custom_endpoint"
 CUSTOM_MODEL="custom_model"
 ```
 
-## How It Works
+## Notion Integration
 
-1. **Initial Setup**
+The Deep Research tool supports exporting your reports directly to Notion using the official Notion API.
 
-   - Takes user query and research parameters (breadth & depth)
-   - Generates follow-up questions to understand research needs better
+### Setup Steps
 
-2. **Deep Research Process**
+1. **Create a Notion integration**
+   - Go to [Notion's Integrations page](https://www.notion.so/my-integrations)
+   - Click **+ New integration**
+   - Name your integration (e.g., "Deep Research Integration")
+   - Select the workspace you want to connect to
+   - Set the capabilities (at minimum, you need "Read content" and "Insert content")
+   - Click **Submit**
+   - Copy the **Internal Integration Token** (this will be your NOTION_TOKEN)
 
-   - Generates multiple SERP queries based on research goals
-   - Processes search results to extract key learnings
-   - Generates follow-up research directions
+2. **Create a Notion page to store your reports**
+   - Create a page in Notion where you want your reports to be stored
+   - Share the page with your integration:
+     - Open the page
+     - Click the **...** (three dots) in the top right corner
+     - Go to **Add connections**
+     - Search for and select your integration
+   - Get the Page ID:
+     - Open the page in your browser
+     - Look at the URL: `https://www.notion.so/[workspace]/[page-id]?v=[view-id]`
+     - Copy the page ID (the part between your workspace name and the "?")
 
-3. **Recursive Exploration**
+3. **Configure environment variables**
+   - Update your `.env.local` file with the following variables:
+     ```
+     # Notion configuration
+     NOTION_TOKEN="your_notion_internal_integration_token"
+     NOTION_PARENT_PAGE_ID="your_notion_page_id"
+     ```
 
-   - If depth > 0, takes new research directions and continues exploration
-   - Each iteration builds on previous learnings
-   - Maintains context of research goals and findings
+### Using the Notion Export Feature
 
-4. **Report Generation**
-   - Compiles all findings into a comprehensive markdown report
-   - Includes all sources and references
-   - Organizes information in a clear, readable format
+The Notion export feature is fully integrated into the main workflow. You can use it in the following ways:
+
+1. **During research**: When you run the Deep Research tool with `npm start`, it will ask if you want to export your report to Notion after generating it.
+
+2. **Export existing reports**: You can export existing research reports or answers to Notion without rerunning the research:
+   ```
+   npm run start -- --export-to-notion report.md
+   ```
+   For answer files, add the `--answer` flag:
+   ```
+   npm run start -- --export-to-notion answer.md --answer
+   ```
+
+3. **Test Notion integration**: To verify your Notion API credentials without running a full research session:
+   ```
+   npm run start -- --test-notion
+   ```
+   This will create a test page in your Notion workspace to confirm everything is working correctly.
+
+### Troubleshooting
+
+If you encounter issues with the Notion integration:
+
+1. Verify that your integration token is correct
+2. Make sure your integration has been properly shared with the parent page
+3. Check that the page ID is correct
+4. Look for error messages in the console output
+5. Run the test command to validate your setup: `npm run start -- --test-notion`
 
 ## License
 
