@@ -127,12 +127,14 @@ export async function writeFinalReport({
   visitedUrls,
 }: {
   prompt: string;
-  learnings: string[];
+  learnings: string[] | string;
   visitedUrls: string[];
 }) {
-  const learningsString = learnings
-    .map(learning => `<learning>\n${learning}\n</learning>`)
-    .join('\n');
+  const learningsString = Array.isArray(learnings)
+    ? learnings
+        .map(learning => `<learning>\n${learning}\n</learning>`)
+        .join('\n')
+    : learnings;
 
   const res = await generateObject({
     model: getModel(),
@@ -158,11 +160,13 @@ export async function writeFinalAnswer({
   learnings,
 }: {
   prompt: string;
-  learnings: string[];
+  learnings: string[] | string;
 }) {
-  const learningsString = learnings
-    .map(learning => `<learning>\n${learning}\n</learning>`)
-    .join('\n');
+  const learningsString = Array.isArray(learnings)
+    ? learnings
+        .map(learning => `<learning>\n${learning}\n</learning>`)
+        .join('\n')
+    : learnings;
 
   const res = await generateObject({
     model: getModel(),
@@ -212,6 +216,7 @@ export async function deepResearch({
     onProgress?.(progress);
   };
 
+  // generate query for the requirment geather
   const serpQueries = await generateSerpQueries({
     query,
     learnings,

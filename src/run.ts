@@ -8,6 +8,10 @@ import {
   writeFinalReport,
 } from './deep-research';
 import { generateFeedback } from './feedback';
+import {
+  understandRequirement,
+  understandRequirementNew,
+} from './understand-requirment';
 
 // Helper function for consistent logging
 function log(...args: any[]) {
@@ -20,7 +24,7 @@ const rl = readline.createInterface({
 });
 
 // Helper function to get user input
-function askQuestion(query: string): Promise<string> {
+export function askQuestion(query: string): Promise<string> {
   return new Promise(resolve => {
     rl.question(query, answer => {
       resolve(answer);
@@ -150,36 +154,20 @@ Increase in telemedicine adoption by 40%.
   if (isReport) {
     log(`Creating research plan...`);
 
-    // Generate follow-up questions
-    const followUpQuestions = await generateFeedback({
-      query: initialQuery,
-    });
-
-    log(
-      '\nTo better understand your research needs, please answer these follow-up questions:',
-    );
-
     // Collect answers to follow-up questions
-    const answers: string[] = [];
-    for (const question of followUpQuestions) {
-      const answer = await askQuestion(`\n${question}\nYour answer: `);
-      answers.push(answer);
-    }
-
-    // Combine all information for deep research
-    combinedQuery = `
-Initial Query: ${initialQuery}
-Follow-up Questions and Answers:
-${followUpQuestions.map((q: string, i: number) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
-`;
   }
 
   log('\nStarting research...\n');
 
-  const { learnings, visitedUrls } = await deepResearch({
-    query: combinedQuery,
-    breadth,
-    depth,
+  // const { insights: learnings, visitedUrls } = await deepResearch({
+  //   query: combinedQuery,
+  // breadth,
+  //   depth,
+
+  // });
+  const visitedUrls: any[] = [];
+  const learnings = await understandRequirementNew({
+    fullRequirement: combinedQuery,
   });
 
   log(`\n\nLearnings:\n\n${learnings.join('\n')}`);
@@ -189,7 +177,7 @@ ${followUpQuestions.map((q: string, i: number) => `Q: ${q}\nA: ${answers[i]}`).j
   if (isReport) {
     const report = await writeFinalReport({
       prompt: combinedQuery,
-      learnings,
+      learnings: JSON.stringify(learnings),
       visitedUrls,
     });
 
@@ -199,7 +187,7 @@ ${followUpQuestions.map((q: string, i: number) => `Q: ${q}\nA: ${answers[i]}`).j
   } else {
     const answer = await writeFinalAnswer({
       prompt: combinedQuery,
-      learnings,
+      learnings: JSON.stringify(learnings),
     });
 
     await fs.writeFile('answer.md', answer, 'utf-8');
