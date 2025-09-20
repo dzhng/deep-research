@@ -25,10 +25,12 @@
     "typescript": "^5.7.3"
   },
   "dependencies": {
-    "@ai-sdk/fireworks": "^0.1.14",
+    "@ai-sdk/fireworks": "^1.0.18",
+    "@ai-sdk/google": "^2.0.14",
     "@ai-sdk/openai": "^1.1.9",
+    "@genkit-ai/google-genai": "^1.19.3",
     "@mendable/firecrawl-js": "^1.16.0",
-    "ai": "^4.1.17",
+    "ai": "^5.0.47",
     "cors": "^2.8.5",
     "express": "^4.18.3",
     "js-tiktoken": "^1.0.17",

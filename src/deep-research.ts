@@ -50,6 +50,7 @@ async function generateSerpQueries({
 }) {
   const res = await generateObject({
     model: getModel(),
+    output: 'object',
     system: systemPrompt(),
     prompt: `Given the following prompt from the user, generate a list of SERP queries to research the topic. Return a maximum of ${numQueries} queries, but feel free to return less if the original prompt is clear. Make sure each query is unique and not similar to each other: <prompt>${query}</prompt>\n\n${
       learnings
@@ -89,13 +90,14 @@ async function processSerpResult({
   numLearnings?: number;
   numFollowUpQuestions?: number;
 }) {
-  const contents = compact(result.data.map(item => item.markdown)).map(content =>
-    trimPrompt(content, 25_000),
+  const contents = compact(result.data.map(item => item.markdown)).map(
+    content => trimPrompt(content, 25_000),
   );
   log(`Ran ${query}, found ${contents.length} contents`);
 
   const res = await generateObject({
     model: getModel(),
+    mode: 'json',
     abortSignal: AbortSignal.timeout(60_000),
     system: systemPrompt(),
     prompt: trimPrompt(
@@ -104,7 +106,9 @@ async function processSerpResult({
         .join('\n')}</contents>`,
     ),
     schema: z.object({
-      learnings: z.array(z.string()).describe(`List of learnings, max of ${numLearnings}`),
+      learnings: z
+        .array(z.string())
+        .describe(`List of learnings, max of ${numLearnings}`),
       followUpQuestions: z
         .array(z.string())
         .describe(
@@ -132,12 +136,15 @@ export async function writeFinalReport({
 
   const res = await generateObject({
     model: getModel(),
+    mode: 'json',
     system: systemPrompt(),
     prompt: trimPrompt(
       `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from previous research:\n\n<learnings>\n${learningsString}\n</learnings>`,
     ),
     schema: z.object({
-      reportMarkdown: z.string().describe('Final report on the topic in Markdown'),
+      reportMarkdown: z
+        .string()
+        .describe('Final report on the topic in Markdown'),
     }),
   });
 
@@ -159,6 +166,7 @@ export async function writeFinalAnswer({
 
   const res = await generateObject({
     model: getModel(),
+    mode: 'json',
     system: systemPrompt(),
     prompt: trimPrompt(
       `Given the following prompt from the user, write a final answer on the topic using the learnings from research. Follow the format specified in the prompt. Do not yap or babble or include any other text than the answer besides the format specified in the prompt. Keep the answer as concise as possible - usually it should be just a few words or maximum a sentence. Try to follow the format specified in the prompt (for example, if the prompt is using Latex, the answer should be in Latex. If the prompt gives multiple answer choices, the answer should be one of the choices).\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from research on the topic that you can use to help answer the prompt:\n\n<learnings>\n${learningsString}\n</learnings>`,
@@ -166,7 +174,9 @@ export async function writeFinalAnswer({
     schema: z.object({
       exactAnswer: z
         .string()
-        .describe('The final answer, make it short and concise, just the answer, no other text'),
+        .describe(
+          'The final answer, make it short and concise, just the answer, no other text',
+        ),
     }),
   });
 
@@ -239,7 +249,9 @@ export async function deepResearch({
           const allUrls = [...visitedUrls, ...newUrls];
 
           if (newDepth > 0) {
-            log(`Researching deeper, breadth: ${newBreadth}, depth: ${newDepth}`);
+            log(
+              `Researching deeper, breadth: ${newBreadth}, depth: ${newDepth}`,
+            );
 
             reportProgress({
               currentDepth: newDepth,

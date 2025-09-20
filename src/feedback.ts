@@ -13,6 +13,7 @@ export async function generateFeedback({
 }) {
   const userFeedback = await generateObject({
     model: getModel(),
+    mode: 'json',
     system: systemPrompt(),
     prompt: `Given the following query from the user, ask some follow up questions to clarify the research direction. Return a maximum of ${numQuestions} questions, but feel free to return less if the original query is clear: <query>${query}</query>`,
     schema: z.object({

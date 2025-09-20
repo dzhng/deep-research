@@ -1,8 +1,11 @@
 import { createFireworks } from '@ai-sdk/fireworks';
 import { createOpenAI } from '@ai-sdk/openai';
+import { google } from "@ai-sdk/google"
+
 import {
   extractReasoningMiddleware,
   LanguageModelV1,
+  
   wrapLanguageModel,
 } from 'ai';
 import { getEncoding } from 'js-tiktoken';
@@ -16,6 +19,9 @@ const openai = process.env.OPENAI_KEY
       baseURL: process.env.OPENAI_ENDPOINT || 'https://api.openai.com/v1',
     })
   : undefined;
+
+const gemini =
+  google("models/gemini-2.5-pro"); 
 
 const fireworks = process.env.FIREWORKS_KEY
   ? createFireworks({
@@ -45,18 +51,16 @@ const deepSeekR1Model = fireworks
     })
   : undefined;
 
-export function getModel(): LanguageModelV1 {
-  if (customModel) {
-    return customModel;
+  export function getModel(): any {
+    if (!gemini) return undefined;
+    
+    // Create a wrapper that adds the missing property
+    return gemini
+    //   ?? {
+    //   ...gemini,
+    //   defaultObjectGenerationMode: 'json' as const
+    // };
   }
-
-  const model = deepSeekR1Model ?? o3MiniModel;
-  if (!model) {
-    throw new Error('No model found');
-  }
-
-  return model as LanguageModelV1;
-}
 
 const MinChunkSize = 140;
 const encoder = getEncoding('o200k_base');
