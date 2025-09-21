@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { getModel } from './ai/providers';
 import { systemPrompt } from './prompt';
+import { throttler } from './throttle';
 import { Messages } from './understand-requirment';
 
 export async function generateFeedback({
@@ -23,20 +24,22 @@ export async function generateFeedback({
     content: prompt,
     role: 'user',
   });
-  const userFeedback = await generateObject({
-    model: getModel(),
-    mode: 'json',
-    system: systemPrompt(),
-    messages: messages as any,
-    prompt: messages ? undefined : prompt,
-    schema: z.object({
-      questions: z
-        .array(z.string())
-        .describe(
-          `Follow up questions to clarify the research direction, max of ${numQuestions}`,
-        ),
+  const userFeedback = await throttler(() =>
+    generateObject({
+      model: getModel(),
+      mode: 'json',
+      system: systemPrompt(),
+      messages: messages as any,
+      prompt: messages ? undefined : prompt,
+      schema: z.object({
+        questions: z
+          .array(z.string())
+          .describe(
+            `Follow up questions to clarify the research direction, max of ${numQuestions}`,
+          ),
+      }),
     }),
-  });
+  );
 
   messages?.push({
     content: userFeedback.object.questions.slice(0, numQuestions).join(' \n'),

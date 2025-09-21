@@ -1,13 +1,7 @@
 import { createFireworks } from '@ai-sdk/fireworks';
+import { google } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
-import { google } from "@ai-sdk/google"
-
-import {
-  extractReasoningMiddleware,
-  LanguageModelV1,
-  
-  wrapLanguageModel,
-} from 'ai';
+import { extractReasoningMiddleware, wrapLanguageModel } from 'ai';
 import { getEncoding } from 'js-tiktoken';
 
 import { RecursiveCharacterTextSplitter } from './text-splitter';
@@ -20,8 +14,8 @@ const openai = process.env.OPENAI_KEY
     })
   : undefined;
 
-const gemini =
-  google("models/gemini-2.5-pro"); 
+// const gemini = google('models/gemini-2.5-pro');
+const gemini = google('models/gemini-2.5-flash');
 
 const fireworks = process.env.FIREWORKS_KEY
   ? createFireworks({
@@ -44,23 +38,21 @@ const o3MiniModel = openai?.('o3-mini', {
 
 const deepSeekR1Model = fireworks
   ? wrapLanguageModel({
-      model: fireworks(
-        'accounts/fireworks/models/deepseek-r1',
-      ) as LanguageModelV1,
+      model: fireworks('accounts/fireworks/models/deepseek-r1'),
       middleware: extractReasoningMiddleware({ tagName: 'think' }),
     })
   : undefined;
 
-  export function getModel(): any {
-    if (!gemini) return undefined;
-    
-    // Create a wrapper that adds the missing property
-    return gemini
-    //   ?? {
-    //   ...gemini,
-    //   defaultObjectGenerationMode: 'json' as const
-    // };
-  }
+export function getModel(): any {
+  if (!gemini) return undefined;
+
+  // Create a wrapper that adds the missing property
+  return gemini;
+  //   ?? {
+  //   ...gemini,
+  //   defaultObjectGenerationMode: 'json' as const
+  // };
+}
 
 const MinChunkSize = 140;
 const encoder = getEncoding('o200k_base');

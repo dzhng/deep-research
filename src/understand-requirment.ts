@@ -6,8 +6,10 @@ import { z } from 'zod';
 
 import { getModel, trimPrompt } from './ai/providers';
 import { generateFeedback } from './feedback';
+import { scrapeMarkdown, searchWithSerper } from './googleSearch';
 import { systemPrompt } from './prompt';
 import { askQuestion } from './run';
+import { throttler } from './throttle';
 
 export type Messages = {
   role: 'system' | 'user' | 'assistant';
@@ -41,44 +43,51 @@ const firecrawl = new FirecrawlApp({
 
 // ⬇️ This function now focuses on refining and deepening a single requirement, not generating diverse queries.
 async function generateRequirementClarifications({
-  requirement,
+  messages,
   depthLevel,
   previousInsights,
 }: {
-  requirement: string;
+  messages: Messages;
   depthLevel: number;
   previousInsights?: string[];
 }) {
-  const res = await generateObject({
-    model: getModel(),
-    output: 'object',
-    system: systemPrompt(),
-    // CHANGED: Focus on understanding and breaking down the requirement step by step
-    prompt: `You are a senior business analyst.
-Your task is to deeply understand and clarify the following requirement step-by-step.
-Focus on edge cases, dependencies, hidden constraints, risks, and stakeholder needs.
-Do not generate new unrelated queries; instead, make the current requirement clearer and more actionable.
-
-<requirement>${requirement}</requirement>
-
-${previousInsights?.length ? `Here are the insights we already have:\n${previousInsights.join('\n')}` : ''}
-
-Provide detailed clarifications and follow-up questions to further understand the requirement.`,
-    schema: z.object({
-      clarifications: z
-        .array(z.string())
-        .describe('List of clarified insights or breakdown points'),
-      followUpQuestions: z
-        .array(z.string())
-        .describe('Deepening questions to further understand the requirement'),
-    }),
+  messages.push({
+    role: 'user',
+    content: `You are a senior business analyst.
+    Your task is to deeply understand and clarify the following requirement step-by-step.
+    Focus on edge cases, dependencies, hidden constraints, risks, and stakeholder needs.
+    Do not generate new unrelated queries; instead, make the current requirement clearer and more actionable.
+    
+    Provide detailed clarifications and follow-up questions to further understand the requirement.`,
   });
+  const res = await throttler(() =>
+    generateObject({
+      model: getModel(),
+      output: 'object',
+      system: systemPrompt(),
+      messages: messages,
+      // prompt:messages,
+      schema: z.object({
+        clarifications: z
+          .array(z.string())
+          .describe('List of clarified insights or breakdown points'),
+        followUpQuestions: z
+          .array(z.string())
+          .describe(
+            'Deepening questions to further understand the requirement',
+          ),
+      }),
+    }),
+  );
 
   log(
     `Generated ${res.object.clarifications.length} clarifications`,
     res.object.clarifications,
   );
-
+  messages.push({
+    role: 'assistant',
+    content: `clarifications\n ${res.object.clarifications.join('\n')} \n\n followUpQuestions\n ${res.object.followUpQuestions.join('\n')}`,
+  });
   return res.object;
 }
 
@@ -112,16 +121,17 @@ async function processRequirementContent({
     role: 'user',
   });
   // CHANGED: Focused prompt for extracting insights from documents specifically for requirement understanding
-  const res = await generateObject({
-    model: getModel(),
-    mode: 'json',
-    abortSignal: AbortSignal.timeout(60_000),
-    system: systemPrompt(),
-    messages: messages as any,
-    prompt: messages
-      ? undefined
-      : trimPrompt(
-          `Given the following documents, extract and summarize information specifically helpful for understanding the requirement: <requirement>${requirement}</requirement>.
+  const res = await throttler(() =>
+    generateObject({
+      model: getModel(),
+      mode: 'json',
+      abortSignal: AbortSignal.timeout(60_000),
+      system: systemPrompt(),
+      messages: messages as any,
+      prompt: messages
+        ? undefined
+        : trimPrompt(
+            `Given the following documents, extract and summarize information specifically helpful for understanding the requirement: <requirement>${requirement}</requirement>.
     Focus on dependencies, constraints, examples, risks, and technical considerations.
 
     <documents>
@@ -129,12 +139,17 @@ async function processRequirementContent({
     </documents>
 
     Return insights that will help clarify or refine the requirement for a business/engineering team.`,
-        ),
-    schema: z.object({
-      insights: z
-        .array(z.string())
-        .describe('List of insights to clarify the requirement'),
+          ),
+      schema: z.object({
+        insights: z
+          .array(z.string())
+          .describe('List of insights to clarify the requirement'),
+      }),
     }),
+  );
+  messages?.push({
+    content: res.object.insights.join('\n'),
+    role: 'assistant',
   });
 
   return res.object;
@@ -142,14 +157,14 @@ async function processRequirementContent({
 
 export async function understandRequirement({
   requirement,
-  depth,
+  depth = 1,
   previousInsights = [],
   visitedUrls = [],
   onProgress,
   messages,
 }: {
-  requirement: string;
-  depth: number;
+  requirement?: string;
+  depth?: number;
   previousInsights?: string[];
   visitedUrls?: string[];
   onProgress?: (progress: UnderstandingProgress) => void;
@@ -169,7 +184,7 @@ export async function understandRequirement({
 
   // 🔑 Instead of generating multiple queries, we clarify the same requirement repeatedly (depth-wise)
   const clarifications = await generateRequirementClarifications({
-    requirement,
+    messages: messages ?? [],
     depthLevel: depth,
     previousInsights,
   });
@@ -181,14 +196,25 @@ export async function understandRequirement({
 
   const limit = pLimit(ConcurrencyLimit);
   const results = await Promise.all(
-    clarifications.followUpQuestions.map(followUp =>
+    clarifications.followUpQuestions.splice(0, 1).map((followUp, index) =>
       limit(async () => {
         try {
-          const result = await firecrawl.search(followUp, {
-            timeout: 15000,
-            limit: 5,
-            scrapeOptions: { formats: ['markdown'] },
-          });
+          const result = await throttler(() =>
+            // firecrawl
+            //   .search(followUp, {
+            //     timeout: 15000,
+            //     limit: 5,
+            //     scrapeOptions: { formats: ['markdown'] },
+            //   })
+            searchWithSerper(followUp).catch(e => {
+              const errorResult: SearchResponse = {
+                data: [],
+                success: false,
+                error: e?.message ?? 'No result found',
+              };
+              return errorResult;
+            }),
+          );
 
           const newUrls = compact(result.data.map(item => item.url));
           const newDepth = depth - 1;
@@ -292,18 +318,20 @@ export async function understandRequirementNew({
       `,
     });
 
-    const res = await generateObject({
-      model: getModel(),
-      mode: 'json',
-      messages,
-      schema: z.object({
-        insights: z
-          .string()
-          .describe(
-            'Detailed understanding of this part of the requirement, considering prior context if available.',
-          ),
+    const res = await throttler(() =>
+      generateObject({
+        model: getModel(),
+        mode: 'json',
+        messages,
+        schema: z.object({
+          insights: z
+            .string()
+            .describe(
+              'Detailed understanding of this part of the requirement, considering prior context if available.',
+            ),
+        }),
       }),
-    });
+    );
 
     // Add assistant response to conversation for future context
     messages.push({
@@ -312,24 +340,33 @@ export async function understandRequirementNew({
     });
   }
 
-  const followUpQuestions = await generateFeedback({
+  // disable feed back for the reduce query
+  // const followUpQuestions = await generateFeedback({
+  //   messages,
+  // });
+
+  // const answers: string[] = [];
+  // for (const question of followUpQuestions) {
+  //   const answer = await askQuestion(`\n${question}\nYour answer: `);
+  //   answers.push(answer);
+  // }
+
+  // messages.push({
+  //   role: 'user',
+  //   content: `
+  //  Follow-up Questions and Answers:
+  //  ${followUpQuestions.map((q: string, i: number) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
+  //   `,
+  // });
+  // messages.push({
+  //   role: 'assistant',
+  //   content: `okay`,
+  // });
+
+  await understandRequirement({
+    depth: 2,
     messages,
   });
-
-  const answers: string[] = [];
-  for (const question of followUpQuestions) {
-    const answer = await askQuestion(`\n${question}\nYour answer: `);
-    answers.push(answer);
-  }
-
-  messages.push({
-    role: 'user',
-    content: `
-   Follow-up Questions and Answers:
-   ${followUpQuestions.map((q: string, i: number) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
-    `,
-  });
-
   return messages;
 }
 
