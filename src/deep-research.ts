@@ -182,11 +182,15 @@ Your goal is to break down the requirments, and explain complex systems in a pro
             ),
       }),
     );
-    const responseString = res.text;
-    runInTheLoop = responseString
+    let responseString = res.text;
+    const lastLengthResponseTrim = responseString
       .slice(responseString.length - 50)
-      .toLowerCase()
-      .includes('--continue-response');
+      .toLowerCase();
+    runInTheLoop = lastLengthResponseTrim.includes('--continue-response');
+    responseString = responseString.replace(
+      /--(continue-available--|end-of-answer--)/gi,
+      '',
+    );
     messages.push({
       content: responseString,
       role: 'assistant',
@@ -200,7 +204,7 @@ Your goal is to break down the requirments, and explain complex systems in a pro
     reportChunks.push(responseString);
   } while (runInTheLoop);
 
-  return reportChunks.join('\n\n');
+  return JSON.stringify(combineJSON(reportChunks));
 }
 
 export async function writeFinalAnswer({
@@ -369,4 +373,37 @@ export async function deepResearch({
     learnings: [...new Set(results.flatMap(r => r.learnings))],
     visitedUrls: [...new Set(results.flatMap(r => r.visitedUrls))],
   };
+}
+
+type Node = {
+  id: string;
+  label: string;
+  descriptions?: string[];
+};
+
+type Edge = {
+  source: string;
+  target: string;
+  relations?: string[];
+};
+
+type CombinedGraph = {
+  nodes: Node[];
+  edges: Edge[];
+};
+
+function combineJSON(arr: string[]): CombinedGraph {
+  return arr.reduce<CombinedGraph>(
+    (acc, str) => {
+      // Remove the "json" prefix and parse
+      const cleaned = str.replace(/^json/, '');
+      const parsed = JSON.parse(cleaned) as CombinedGraph;
+
+      acc.nodes.push(...parsed.nodes);
+      acc.edges.push(...parsed.edges);
+
+      return acc;
+    },
+    { nodes: [], edges: [] },
+  );
 }
