@@ -1,5 +1,5 @@
 import FirecrawlApp, { SearchResponse } from '@mendable/firecrawl-js';
-import { generateObject } from 'ai';
+import { generateObject, generateText } from 'ai';
 import { compact } from 'lodash-es';
 import pLimit from 'p-limit';
 import { z } from 'zod';
@@ -171,9 +171,8 @@ Your goal is to break down the requirments, and explain complex systems in a pro
   let runInTheLoop = false;
   do {
     const res = await throttler(() =>
-      generateObject({
+      generateText({
         model: getModel(),
-        mode: 'json',
         // system: systemJSONPrompt(),
         messages: messages as any,
         prompt: messages
@@ -181,15 +180,13 @@ Your goal is to break down the requirments, and explain complex systems in a pro
           : trimPrompt(
               `Given the following prompt from the user, write a final report on the topic using the learnings from research. Make it as as detailed as possible, aim for 3 or more pages, include ALL the learnings from research:\n\n<prompt>${prompt}</prompt>\n\nHere are all the learnings from previous research:\n\n<learnings>\n${learningsString}\n</learnings>`,
             ),
-        schema: z.object({
-          reportMarkdown: z
-            .string()
-            .describe('Final report on the topic in Markdown'),
-        }),
       }),
     );
-    const responseString = res.object.reportMarkdown;
-    runInTheLoop = responseString.includes('--CONTINUE-AVAILABLE--');
+    const responseString = res.text;
+    runInTheLoop = responseString
+      .slice(responseString.length - 50)
+      .toLowerCase()
+      .includes('--continue-response');
     messages.push({
       content: responseString,
       role: 'assistant',

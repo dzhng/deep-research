@@ -65,4 +65,4 @@ export function createRequestThrottler(limit: number, intervalMs: number) {
   };
 }
 // <T>(fn: Task<T>) => fn();
-export const throttler = createRequestThrottler(3, 60100);
+export const throttler = createRequestThrottler(10, 60100);

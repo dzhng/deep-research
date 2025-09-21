@@ -1,6 +1,7 @@
 import { createFireworks } from '@ai-sdk/fireworks';
 import { google } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { extractReasoningMiddleware, wrapLanguageModel } from 'ai';
 import { getEncoding } from 'js-tiktoken';
 
@@ -14,8 +15,15 @@ const openai = process.env.OPENAI_KEY
     })
   : undefined;
 
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_KEY!,
+});
+
 // const gemini = google('models/gemini-2.5-pro');
-const gemini = google('models/gemini-2.5-flash');
+const gemini =
+  openrouter('x-ai/grok-4-fast:free') ||
+  openrouter('google/gemini-2.0-flash-exp:free') ||
+  google('models/gemini-2.5-flash');
 
 const fireworks = process.env.FIREWORKS_KEY
   ? createFireworks({
