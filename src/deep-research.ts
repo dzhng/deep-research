@@ -157,13 +157,13 @@ Response Guidelines:
 3. Provide a **clear, comprehensive, and logically structured explanation** — but never force the entire answer into one response if it’s too long.  
 4. If the full answer is long, **stop at a natural section break** (not mid-sentence).  
 5. At the end of partial responses, include this exact marker:  
-   '--CONTINUE-AVAILABLE--'  
+   '--continue-response'  
    to signal that more content is available.  
 6. When all parts have been delivered, end with:  
-   '--END-OF-ANSWER--'  
+   '--end-response'  
 7. Maintain context and flow across messages so the explanation feels continuous and complete.  
 8. Each part should be **meaningful, not too small**, but readable enough for easy comprehension.  
-9. If the topic is short, send the full response in one message and end with '--END-OF-ANSWER--'.  
+9. If the topic is short, send the full response in one message and end with '--end-response'.  
 
 Your goal is to break down the requirments, and explain complex systems in a progressive.`,
     role: 'user',
@@ -187,8 +187,9 @@ Your goal is to break down the requirments, and explain complex systems in a pro
       .slice(responseString.length - 50)
       .toLowerCase();
     runInTheLoop = lastLengthResponseTrim.includes('--continue-response');
+    console.log(responseString, 'responseString');
     responseString = responseString.replace(
-      /--(continue-available--|end-of-answer--)/gi,
+      /(^json|--continue-response|--end-response)/gi,
       '',
     );
     messages.push({

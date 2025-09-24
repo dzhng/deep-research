@@ -7,11 +7,7 @@ import {
   writeFinalAnswer,
   writeFinalReport,
 } from './deep-research';
-import { generateFeedback } from './feedback';
-import {
-  understandRequirement,
-  understandRequirementNew,
-} from './understand-requirment';
+import { understandRequirementNew } from './understand-requirment';
 
 // Helper function for consistent logging
 function log(...args: any[]) {
@@ -2285,33 +2281,35 @@ Publication approval reference: PAR1304`;
 
   // });
   const visitedUrls: any[] = [];
-  const learnings = await understandRequirementNew({
+  const report = await understandRequirementNew({
     fullRequirement: combinedQuery,
+    askQuestion: askQuestion,
+    messages: [],
   });
 
-  log(`\n\nLearnings:\n\n${learnings.join('\n')}`);
-  log(`\n\nVisited URLs (${visitedUrls.length}):\n\n${visitedUrls.join('\n')}`);
-  log('Writing final report...');
+  // log(`\n\nLearnings:\n\n${learnings.join('\n')}`);
+  // log(`\n\nVisited URLs (${visitedUrls.length}):\n\n${visitedUrls.join('\n')}`);
+  // log('Writing final report...');
 
   if (isReport) {
-    const report = await writeFinalReport({
-      messages: learnings,
-      prompt: combinedQuery,
-      learnings: JSON.stringify(learnings),
-      visitedUrls,
-    });
+    // const report = await writeFinalReport({
+    //   messages: learnings,
+    //   prompt: combinedQuery,
+    //   learnings: JSON.stringify(learnings),
+    //   visitedUrls,
+    // });
 
     await fs.writeFile('report.md', report, 'utf-8');
     console.log(`\n\nFinal Report:\n\n${report}`);
     console.log('\nReport has been saved to report.md');
   } else {
-    const answer = await writeFinalAnswer({
-      prompt: combinedQuery,
-      learnings: JSON.stringify(learnings),
-    });
+    // const answer = await writeFinalAnswer({
+    //   prompt: combinedQuery,
+    //   learnings: JSON.stringify(learnings),
+    // });
 
-    await fs.writeFile('answer.md', answer, 'utf-8');
-    console.log(`\n\nFinal Answer:\n\n${answer}`);
+    await fs.writeFile('answer.md', report, 'utf-8');
+    console.log(`\n\nFinal Answer:\n\n${report}`);
     console.log('\nAnswer has been saved to answer.md');
   }
 

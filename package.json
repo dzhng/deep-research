@@ -6,6 +6,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "tsx": "tsx --env-file=.env.local",
     "start": "tsx --env-file=.env.local src/run.ts",
+    "start:ws": "tsx --env-file=.env.local src/websocket/start.ts",
+    "dev:ws": "tsx --watch --env-file=.env.local src/websocket/start.ts",
     "api": "tsx --env-file=.env.local src/api.ts",
     "docker": "tsx src/run.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -40,6 +42,7 @@
     "lodash-es": "^4.17.21",
     "p-limit": "^6.2.0",
     "pdf-parse": "^1.1.1",
+    "ws": "^8.18.0",
     "uuid": "^9.0.1",
     "zod": "^3.24.1"
   },

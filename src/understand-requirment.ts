@@ -5,8 +5,9 @@ import pLimit from 'p-limit';
 import { z } from 'zod';
 
 import { getModel, trimPrompt } from './ai/providers';
+import { writeFinalReport } from './deep-research';
 import { generateFeedback } from './feedback';
-import { scrapeMarkdown, searchWithSerper } from './googleSearch';
+import { searchWithSerper } from './googleSearch';
 import { systemPrompt } from './prompt';
 import { askQuestion } from './run';
 import { throttler } from './throttle';
@@ -168,7 +169,7 @@ export async function understandRequirement({
   previousInsights?: string[];
   visitedUrls?: string[];
   onProgress?: (progress: UnderstandingProgress) => void;
-  messages?: Messages;
+  messages: Messages;
 }): Promise<UnderstandingResult> {
   const progress: UnderstandingProgress = {
     currentDepth: depth,
@@ -184,7 +185,7 @@ export async function understandRequirement({
 
   // 🔑 Instead of generating multiple queries, we clarify the same requirement repeatedly (depth-wise)
   const clarifications = await generateRequirementClarifications({
-    messages: messages ?? [],
+    messages: messages,
     depthLevel: depth,
     previousInsights,
   });
@@ -288,86 +289,91 @@ function splitRequirementIntoChunks(text: string, chunkSize: number): string[] {
 
 export async function understandRequirementNew({
   fullRequirement,
+  messages,
+  askQuestion,
 }: {
   fullRequirement: string;
+  messages: Messages;
+  askQuestion: (question: string) => Promise<string>;
 }) {
-  // 1. Split the requirement into manageable chunks.
-  //    This prevents hitting token limits and allows step-by-step analysis.
-  const chunks = splitRequirementIntoChunks(fullRequirement, 30000);
+  try {
+    // 1. Split the requirement into manageable chunks.
+    //    This prevents hitting token limits and allows step-by-step analysis.
+    const chunks = splitRequirementIntoChunks(fullRequirement, 30000);
 
-  // 2. Maintain a conversation array to preserve context across requests.
-  //    This simulates a single chat window where Gemini "remembers" previous messages.
-  const messages: Messages = [
-    {
-      role: 'system',
-      content:
-        'You are a requirement analysis agent. Your task is to deeply understand complex requirements and keep track of context across multiple inputs.',
-    },
-  ];
-
-  // 3. Process each chunk sequentially, adding it to the conversation.
-  for (let i = 0; i < chunks.length; i++) {
-    messages.push({
-      role: 'user',
-      content: `
+    // 3. Process each chunk sequentially, adding it to the conversation.
+    for (let i = 0; i < chunks.length; i++) {
+      messages.push({
+        role: 'user',
+        content: `
         This is part ${i + 1} of ${chunks.length} of a large requirement document. 
         Analyze and extract the key functional and non-functional requirements, dependencies, constraints, and scope.
         Keep the output self-contained and detailed, as this will be combined with other parts later.
 
         <requirement>${chunks[i]}</requirement>
       `,
+      });
+
+      const res = await throttler(() =>
+        generateObject({
+          model: getModel(),
+          mode: 'json',
+          messages,
+          schema: z.object({
+            insights: z
+              .string()
+              .describe(
+                'Detailed understanding of this part of the requirement, considering prior context if available.',
+              ),
+          }),
+        }),
+      );
+
+      // Add assistant response to conversation for future context
+      messages.push({
+        role: 'assistant',
+        content: res.object.insights,
+      });
+    }
+
+    // disable feed back for the reduce query
+    const followUpQuestions = await generateFeedback({
+      messages,
     });
 
-    const res = await throttler(() =>
-      generateObject({
-        model: getModel(),
-        mode: 'json',
-        messages,
-        schema: z.object({
-          insights: z
-            .string()
-            .describe(
-              'Detailed understanding of this part of the requirement, considering prior context if available.',
-            ),
-        }),
-      }),
-    );
+    const answers: string[] = [];
+    for (const question of followUpQuestions) {
+      const answer = await askQuestion(`\n${question}\nYour answer: `);
+      answers.push(answer);
+    }
 
-    // Add assistant response to conversation for future context
+    messages.push({
+      role: 'user',
+      content: `
+   Follow-up Questions and Answers:
+   ${followUpQuestions.map((q: string, i: number) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
+    `,
+    });
     messages.push({
       role: 'assistant',
-      content: res.object.insights,
+      content: `okay`,
     });
+
+    await understandRequirement({
+      depth: 2,
+      messages,
+    });
+
+    const report = await writeFinalReport({
+      messages: messages,
+      prompt: fullRequirement,
+      learnings: JSON.stringify(messages),
+      visitedUrls: [],
+    });
+    return report;
+  } catch (e) {
+    console.log(e, 'error bro here');
   }
-
-  // disable feed back for the reduce query
-  // const followUpQuestions = await generateFeedback({
-  //   messages,
-  // });
-
-  // const answers: string[] = [];
-  // for (const question of followUpQuestions) {
-  //   const answer = await askQuestion(`\n${question}\nYour answer: `);
-  //   answers.push(answer);
-  // }
-
-  // messages.push({
-  //   role: 'user',
-  //   content: `
-  //  Follow-up Questions and Answers:
-  //  ${followUpQuestions.map((q: string, i: number) => `Q: ${q}\nA: ${answers[i]}`).join('\n')}
-  //   `,
-  // });
-  // messages.push({
-  //   role: 'assistant',
-  //   content: `okay`,
-  // });
-
-  await understandRequirement({
-    depth: 2,
-    messages,
-  });
-  return messages;
 }
 
 /**
