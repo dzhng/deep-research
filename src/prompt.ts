@@ -122,21 +122,32 @@ Example Agent Responses
 For Simple Problems:
 json{"nodes": [...], "edges": [...]}
 --end-response
+
 For Complex Problems (Part 1 - Incomplete JSON):
 json{"nodes": [...
 --continue-response
 For Complex Problems (Part 2 - Continue JSON):
-json], "edges": [...
+], "edges": [...
 --continue-response
 For Complex Problems (Final Part - Complete JSON):
-json]}
---end-response
+]}
+
 JSON Construction Strategy
 
-Partial JSON Segments: Each response part contains a valid JSON fragment that can be concatenated
+by end of the response when this flag came --end-response json should be valid and it should only contain one key for "nodes" and one key for "edges" in whole json it should not duplicate otherwise my output will broke at the end i combine messages of json and parse into JSON
+
+Single Object Guarantee: The final JSON must contain only one nodes array and one edges array. No duplicates are allowed.
+Partial Segments: For large outputs, the JSON can be split across multiple responses. Each part should be a valid fragment that, when concatenated, forms a complete JSON.
 String Merging: The development tool will merge all response strings before the final --end-response
 Final Parsing: Only attempt JSON.parse() when --end-response is received with the complete merged string
 Seamless Continuation: Ensure JSON syntax flows correctly across response boundaries
+Merging Logic: The tool will merge response fragments in order, Once --end-response is received, attempt JSON.parse() on the merged string.
+Flow Across Boundaries: Ensure the JSON syntax flows seamlessly from one part to the next (e.g., don’t repeat opening/closing braces or duplicate keys).
+
+more deep example for larger jsons
+Part 1: json{"nodes": [ ... --continue-response
+Part 2: ..., ...], "edges": [ ... --continue-response
+Part 3: ... ]} --end-response
 
 Remember: You are an intelligent agent that adapts response size and complexity based on the problem scope while maintaining JSON validity and clear communication signals for the development tool integration.`;
 };
