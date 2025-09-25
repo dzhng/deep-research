@@ -394,6 +394,7 @@ type CombinedGraph = {
 };
 
 function combineJSON(arr: string[]): CombinedGraph {
+  return JSON.parse(arr.join(''));
   return arr.reduce<CombinedGraph>(
     (acc, str) => {
       // Remove the "json" prefix and parse
