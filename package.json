@@ -1,8 +1,11 @@
 {
   "name": "open-deep-research",
   "version": "0.0.1",
-  "main": "index.ts",
+  "main": "dist/websocket/start.js",
+  "type": "module",
   "scripts": {
+    "build": "tsc && tsc-alias",
+    "start:prod": "node --env-file=.env.local dist/websocket/start.js",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "tsx": "tsx --env-file=.env.local",
     "start": "tsx --env-file=.env.local src/run.ts",
@@ -23,7 +26,9 @@
     "@types/node": "^22.13.0",
     "@types/pdf-parse": "^1.1.5",
     "@types/uuid": "^9.0.8",
+    "@types/ws": "^8.18.1",
     "prettier": "^3.4.2",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
@@ -42,8 +47,8 @@
     "lodash-es": "^4.17.21",
     "p-limit": "^6.2.0",
     "pdf-parse": "^1.1.1",
-    "ws": "^8.18.0",
     "uuid": "^9.0.1",
+    "ws": "^8.18.0",
     "zod": "^3.24.1"
   },
   "engines": {

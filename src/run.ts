@@ -2298,8 +2298,6 @@ Publication approval reference: PAR1304`;
     //   learnings: JSON.stringify(learnings),
     //   visitedUrls,
     // });
-
-    await fs.writeFile('report.md', report, 'utf-8');
     console.log(`\n\nFinal Report:\n\n${report}`);
     console.log('\nReport has been saved to report.md');
   } else {
@@ -2307,8 +2305,6 @@ Publication approval reference: PAR1304`;
     //   prompt: combinedQuery,
     //   learnings: JSON.stringify(learnings),
     // });
-
-    await fs.writeFile('answer.md', report, 'utf-8');
     console.log(`\n\nFinal Answer:\n\n${report}`);
     console.log('\nAnswer has been saved to answer.md');
   }
