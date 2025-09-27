@@ -27,6 +27,7 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/uuid": "^9.0.8",
     "@types/ws": "^8.18.1",
+    "esbuild": "^0.25.10",
     "prettier": "^3.4.2",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.19.2",

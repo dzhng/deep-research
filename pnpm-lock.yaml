@@ -84,6 +84,9 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.10
       prettier:
         specifier: ^3.4.2
         version: 3.6.2

@@ -4,8 +4,7 @@ WORKDIR /app
 
 COPY . .
 COPY package.json ./
-COPY .env.local ./.env.local
 
 RUN npm install
 
-CMD ["npm", "run", "docker"]
+CMD ["npm", "run", "start:ws"]
