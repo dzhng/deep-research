@@ -23,6 +23,13 @@ const fireworks = process.env.FIREWORKS_KEY
     })
   : undefined;
 
+const minimax = process.env.MINIMAX_API_KEY
+  ? createOpenAI({
+      apiKey: process.env.MINIMAX_API_KEY,
+      baseURL: 'https://api.minimax.io/v1',
+    })
+  : undefined;
+
 const customModel = process.env.CUSTOM_MODEL
   ? openai?.(process.env.CUSTOM_MODEL, {
       structuredOutputs: true,
@@ -45,12 +52,19 @@ const deepSeekR1Model = fireworks
     })
   : undefined;
 
+const minimaxModel = minimax?.(
+  process.env.MINIMAX_MODEL || 'MiniMax-M2.5',
+  {
+    structuredOutputs: true,
+  },
+);
+
 export function getModel(): LanguageModelV1 {
   if (customModel) {
     return customModel;
   }
 
-  const model = deepSeekR1Model ?? o3MiniModel;
+  const model = minimaxModel ?? deepSeekR1Model ?? o3MiniModel;
   if (!model) {
     throw new Error('No model found');
   }
