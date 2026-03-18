@@ -53,7 +53,7 @@ const deepSeekR1Model = fireworks
   : undefined;
 
 const minimaxModel = minimax?.(
-  process.env.MINIMAX_MODEL || 'MiniMax-M2.5',
+  process.env.MINIMAX_MODEL || 'MiniMax-M2.7',
   {
     structuredOutputs: true,
   },

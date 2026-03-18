@@ -174,10 +174,10 @@ Deep research also works with [MiniMax](https://www.minimaxi.com) models, which 
 MINIMAX_API_KEY="your_api_key"
 ```
 
-The system will automatically use MiniMax-M2.5 when the key is detected. You can also specify a different model:
+The system will automatically use MiniMax-M2.7 when the key is detected. You can also specify a different model:
 
 ```bash
-MINIMAX_MODEL="MiniMax-M2.5-highspeed"
+MINIMAX_MODEL="MiniMax-M2.7-highspeed"
 ```
 
 ### Custom endpoints and models
