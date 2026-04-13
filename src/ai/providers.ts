@@ -17,6 +17,13 @@ const openai = process.env.OPENAI_KEY
     })
   : undefined;
 
+const nvidia = process.env.NVIDIA_API_KEY
+  ? createOpenAI({
+      apiKey: process.env.NVIDIA_API_KEY,
+      baseURL: 'https://integrate.api.nvidia.com/v1',
+    })
+  : undefined;
+
 const fireworks = process.env.FIREWORKS_KEY
   ? createFireworks({
       apiKey: process.env.FIREWORKS_KEY,
@@ -31,8 +38,19 @@ const customModel = process.env.CUSTOM_MODEL
 
 // Models
 
-const o3MiniModel = openai?.('o3-mini', {
-  reasoningEffort: 'medium',
+// NVIDIA models
+const nvidiaLlama405bModel = nvidia?.('meta/llama-3.1-405b-instruct');
+const nvidiaLlama70bModel = nvidia?.('meta/llama-3.1-70b-instruct');
+const nvidiaLlama8bModel = nvidia?.('meta/llama-3.1-8b-instruct');
+const nvidiaNemotron70bModel = nvidia?.('nvidia/llama-3.1-nemotron-70b-instruct');
+// Commenting out problematic DeepSeek R1 model for now
+// const nvidiaDeepSeekR1Model = nvidia?.('deepseek-ai/deepseek-r1');
+
+const gpt4oMiniModel = openai?.('gpt-4o-mini', {
+  structuredOutputs: true,
+});
+
+const gpt4oModel = openai?.('gpt-4o', {
   structuredOutputs: true,
 });
 
@@ -50,7 +68,15 @@ export function getModel(): LanguageModelV1 {
     return customModel;
   }
 
-  const model = deepSeekR1Model ?? o3MiniModel;
+  // Priority order: Start with smaller, more stable NVIDIA models, then fallback to other providers
+  const model = nvidiaLlama70bModel ??
+                nvidiaLlama8bModel ??
+                nvidiaNemotron70bModel ?? 
+                nvidiaLlama405bModel ??
+                deepSeekR1Model ??
+                gpt4oMiniModel ??
+                gpt4oModel;
+  
   if (!model) {
     throw new Error('No model found');
   }

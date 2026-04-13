@@ -79,7 +79,10 @@ flowchart TB
 - Node.js environment
 - API keys for:
   - Firecrawl API (for web search and content extraction)
-  - OpenAI API (for o3 mini model)
+  - One of the following AI providers:
+    - **NVIDIA API** (recommended - access to DeepSeek R1, Llama 3.1 405B, Nemotron 70B)
+    - **Fireworks AI** (for DeepSeek R1)
+    - **OpenAI API** (for GPT-4o-mini)
 
 ## Setup
 
@@ -99,13 +102,46 @@ FIRECRAWL_KEY="your_firecrawl_key"
 # If you want to use your self-hosted Firecrawl, add the following below:
 # FIRECRAWL_BASE_URL="http://localhost:3002"
 
+# NVIDIA API (build.nvidia.com) - Recommended
+NVIDIA_API_KEY="your_nvidia_api_key"
+
+# Alternative: OpenAI API (fallback)
 OPENAI_KEY="your_openai_key"
+
+# Alternative: Fireworks AI (for DeepSeek R1)
+# FIREWORKS_KEY="your_fireworks_key"
 ```
 
-To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOINT` and `OPENAI_MODEL`:
+### Model Priority
+
+The system automatically selects the best available model in this order:
+
+1. **DeepSeek R1** (Fireworks) - if `FIREWORKS_KEY` is set
+2. **DeepSeek R1** (NVIDIA) - if `NVIDIA_API_KEY` is set ⭐ **Recommended**
+3. **Llama 3.1 405B** (NVIDIA) - Most capable model
+4. **Nemotron 70B** (NVIDIA) - NVIDIA's research-optimized model
+5. **Llama 3.1 70B** (NVIDIA) - Strong general purpose model
+6. **GPT-4o-mini** (OpenAI) - Fallback option
+
+To use local LLM, comment out other API keys and instead set `OPENAI_ENDPOINT` and `CUSTOM_MODEL`:
 
 - Set `OPENAI_ENDPOINT` to the address of your local server (eg."http://localhost:1234/v1")
-- Set `OPENAI_MODEL` to the name of the model loaded in your local server.
+- Set `CUSTOM_MODEL` to the name of the model loaded in your local server.
+
+### NVIDIA API (Recommended)
+
+NVIDIA's build.nvidia.com provides access to state-of-the-art models including:
+
+- **DeepSeek R1**: Excellent reasoning capabilities, perfect for research
+- **Llama 3.1 405B**: Most capable open-source model available
+- **Nemotron 70B**: NVIDIA's research-optimized model
+- **Llama 3.1 70B**: Strong general-purpose model
+
+To get an API key:
+1. Visit [build.nvidia.com](https://build.nvidia.com)
+2. Sign up for a free account
+3. Generate an API key
+4. Add it to your `.env.local` as `NVIDIA_API_KEY`
 
 ### Docker
 
@@ -158,22 +194,30 @@ If you have a free version, you may sometimes run into rate limit errors, you ca
 
 ### DeepSeek R1
 
-Deep research performs great on R1! We use [Fireworks](http://fireworks.ai) as the main provider for the R1 model. To use R1, simply set a Fireworks API key:
+Deep research performs great on R1! You can access DeepSeek R1 through two providers:
 
+#### NVIDIA (Recommended)
 ```bash
-FIREWORKS_KEY="api_key"
+NVIDIA_API_KEY="your_nvidia_api_key"
 ```
 
-The system will automatically switch over to use R1 instead of `o3-mini` when the key is detected.
+#### Fireworks AI
+```bash
+FIREWORKS_KEY="your_fireworks_api_key"
+```
 
-### Custom endpoints and models
+The system will automatically use Fireworks R1 if both keys are present (higher priority).
 
-There are 2 other optional env vars that lets you tweak the endpoint (for other OpenAI compatible APIs like OpenRouter or Gemini) as well as the model string.
+### Alternative Providers
+
+For other OpenAI-compatible APIs or local models, you can use these environment variables:
 
 ```bash
 OPENAI_ENDPOINT="custom_endpoint"
 CUSTOM_MODEL="custom_model"
 ```
+
+These will take the highest priority if set.
 
 ## How It Works
 
