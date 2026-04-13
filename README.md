@@ -6,6 +6,7 @@ The goal of this repo is to provide the simplest implementation of a deep resear
 
 If you like this project, please consider starring it and giving me a follow on [X/Twitter](https://x.com/dzhng). This project is created by [Duet](https://duet.so).
 
+
 ## How It Works
 
 ```mermaid
