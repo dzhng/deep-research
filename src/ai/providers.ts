@@ -10,12 +10,10 @@ import { getEncoding } from 'js-tiktoken';
 import { RecursiveCharacterTextSplitter } from './text-splitter';
 
 // Providers
-const openai = process.env.OPENAI_KEY
-  ? createOpenAI({
+const openai = createOpenAI({
       apiKey: process.env.OPENAI_KEY,
       baseURL: process.env.OPENAI_ENDPOINT || 'https://api.openai.com/v1',
-    })
-  : undefined;
+    });
 
 const fireworks = process.env.FIREWORKS_KEY
   ? createFireworks({
