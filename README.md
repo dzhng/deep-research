@@ -104,7 +104,7 @@ OPENAI_KEY="your_openai_key"
 
 To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOINT` and `OPENAI_MODEL`:
 
-- Set `OPENAI_ENDPOINT` to the address of your local server (eg."http://localhost:1234/v1")
+- Set `OPENAI_ENDPOINT` to the address of your local server address (e.g., `192.198.x.x:port/v1`, or host.docker.internal:port/v1), you should **not** use `localhost:port` if you are working with docker. 
 - Set `OPENAI_MODEL` to the name of the model loaded in your local server.
 
 ### Docker
