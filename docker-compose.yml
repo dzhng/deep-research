@@ -5,6 +5,8 @@ services:
     env_file:
       - .env.local
     volumes:
-      -  ./:/app/
+      - ./:/app/
+      - /app/node_modules
     tty: true
     stdin_open: true
+
