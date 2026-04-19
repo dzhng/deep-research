@@ -23,9 +23,13 @@ const fireworks = process.env.FIREWORKS_KEY
     })
   : undefined;
 
+// Some providers (e.g. Groq, GLM-4) only support 'json_object' mode and not 'json_schema'.
+// Set STRUCTURED_OUTPUTS=false in your .env.local to disable json_schema for compatibility.
+const structuredOutputs = process.env.STRUCTURED_OUTPUTS?.toLowerCase() !== 'false';
+
 const customModel = process.env.CUSTOM_MODEL
   ? openai?.(process.env.CUSTOM_MODEL, {
-      structuredOutputs: true,
+      structuredOutputs,
     })
   : undefined;
 
