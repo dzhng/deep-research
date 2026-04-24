@@ -10,12 +10,15 @@ import { getEncoding } from 'js-tiktoken';
 import { RecursiveCharacterTextSplitter } from './text-splitter';
 
 // Providers
-const openai = process.env.OPENAI_KEY
-  ? createOpenAI({
-      apiKey: process.env.OPENAI_KEY,
-      baseURL: process.env.OPENAI_ENDPOINT || 'https://api.openai.com/v1',
-    })
-  : undefined;
+// Create openai client when OPENAI_KEY is set, or when CUSTOM_MODEL is configured
+// (local/OpenAI-compatible endpoints don't require a real API key)
+const openai =
+  process.env.OPENAI_KEY || process.env.CUSTOM_MODEL
+    ? createOpenAI({
+        apiKey: process.env.OPENAI_KEY || 'placeholder',
+        baseURL: process.env.OPENAI_ENDPOINT || 'https://api.openai.com/v1',
+      })
+    : undefined;
 
 const fireworks = process.env.FIREWORKS_KEY
   ? createFireworks({
