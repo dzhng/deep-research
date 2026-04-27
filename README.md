@@ -78,7 +78,7 @@ flowchart TB
 
 - Node.js environment
 - API keys for:
-  - Firecrawl API (for web search and content extraction)
+  - A search provider — either [Firecrawl](https://www.firecrawl.dev) (default) or [Exa](https://exa.ai)
   - OpenAI API (for o3 mini model)
 
 ## Setup
@@ -106,6 +106,25 @@ To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOIN
 
 - Set `OPENAI_ENDPOINT` to the address of your local server (eg."http://localhost:1234/v1")
 - Set `OPENAI_MODEL` to the name of the model loaded in your local server.
+
+### Using Exa as the search provider
+
+[Exa](https://exa.ai) is a neural search API designed for AI agents and provides additional knobs (search type, category filters, domain filters, date ranges) that can improve research quality on technical or research-paper queries.
+
+To use Exa, set `SEARCH_PROVIDER="exa"` and provide an Exa API key in `.env.local`:
+
+```bash
+SEARCH_PROVIDER="exa"
+EXA_API_KEY="your_exa_key"
+
+# Optional tuning:
+# EXA_SEARCH_TYPE="auto"          # auto | neural | fast | deep | deep-lite | deep-reasoning | instant
+# EXA_CATEGORY="research paper"   # company | research paper | news | pdf | personal site | financial report | people
+# EXA_INCLUDE_DOMAINS="arxiv.org,nature.com"
+# EXA_EXCLUDE_DOMAINS="reddit.com"
+# EXA_START_PUBLISHED_DATE="2024-01-01"
+# EXA_END_PUBLISHED_DATE="2026-12-31"
+```
 
 ### Docker
 
