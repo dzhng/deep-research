@@ -166,6 +166,20 @@ FIREWORKS_KEY="api_key"
 
 The system will automatically switch over to use R1 instead of `o3-mini` when the key is detected.
 
+### MiniMax
+
+Deep research also works with [MiniMax](https://www.minimaxi.com) models. The default `MiniMax-M3` offers a 512K token context window with image input support. To use MiniMax, set your API key:
+
+```bash
+MINIMAX_API_KEY="your_api_key"
+```
+
+The system will automatically use MiniMax-M3 when the key is detected. You can also specify a different model:
+
+```bash
+MINIMAX_MODEL="MiniMax-M2.7"
+```
+
 ### Custom endpoints and models
 
 There are 2 other optional env vars that lets you tweak the endpoint (for other OpenAI compatible APIs like OpenRouter or Gemini) as well as the model string.
