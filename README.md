@@ -168,16 +168,16 @@ The system will automatically switch over to use R1 instead of `o3-mini` when th
 
 ### MiniMax
 
-Deep research also works with [MiniMax](https://www.minimaxi.com) models, which offer up to 204K token context. To use MiniMax, set your API key:
+Deep research also works with [MiniMax](https://www.minimaxi.com) models. The default `MiniMax-M3` offers a 512K token context window with image input support. To use MiniMax, set your API key:
 
 ```bash
 MINIMAX_API_KEY="your_api_key"
 ```
 
-The system will automatically use MiniMax-M2.7 when the key is detected. You can also specify a different model:
+The system will automatically use MiniMax-M3 when the key is detected. You can also specify a different model:
 
 ```bash
-MINIMAX_MODEL="MiniMax-M2.7-highspeed"
+MINIMAX_MODEL="MiniMax-M2.7"
 ```
 
 ### Custom endpoints and models
