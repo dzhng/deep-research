@@ -74,6 +74,12 @@ flowchart TB
 - **Comprehensive Reports**: Produces detailed markdown reports with findings and sources
 - **Concurrent Processing**: Handles multiple searches and result processing in parallel for efficiency
 
+## 📊 EvalMonkey Benchmark Results (Claude Sonnet 4.5)
+
+[![EvalMonkey Reliability](https://img.shields.io/badge/Production%20Reliability-Score%3A46.2-orange)](https://github.com/Corbell-AI/evalmonkey)
+
+*This agent scored a Production Reliability of **46.2/100** when benchmarked on Claude Sonnet 4.5 across HotpotQA, TruthfulQA, and MMLU with adversarial chaos profiles (prompt injection & schema mutation) by [EvalMonkey](https://github.com/Corbell-AI/evalmonkey).*
+
 ## Requirements
 
 - Node.js environment
