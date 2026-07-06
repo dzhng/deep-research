@@ -81,7 +81,7 @@ app.post('/api/generate-report',async(req:Request,res:Response)=>{
       visitedUrls
     });
 
-    return report
+    return res.json({ success: true, report })
     
   }catch(error:unknown){
     console.error("Error in generate report API:",error)
