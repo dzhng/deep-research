@@ -36,7 +36,7 @@ const firecrawl = new FirecrawlApp({
   apiUrl: process.env.FIRECRAWL_BASE_URL,
 });
 
-// take en user query, return a list of SERP queries
+// take a user query, return a list of SERP queries
 async function generateSerpQueries({
   query,
   numQueries = 3,

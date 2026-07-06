@@ -35,7 +35,7 @@ async function run() {
   // Get initial query
   const initialQuery = await askQuestion('What would you like to research? ');
 
-  // Get breath and depth parameters
+  // Get breadth and depth parameters
   const breadth =
     parseInt(
       await askQuestion(
