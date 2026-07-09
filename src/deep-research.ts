@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { getModel, trimPrompt } from './ai/providers';
 import { systemPrompt } from './prompt';
+import * as youcom from './youcom';
 
 function log(...args: any[]) {
   console.log(...args);
@@ -35,6 +36,23 @@ const firecrawl = new FirecrawlApp({
   apiKey: process.env.FIRECRAWL_KEY ?? '',
   apiUrl: process.env.FIRECRAWL_BASE_URL,
 });
+
+// Search backend selector. Set SEARCH_PROVIDER=youcom to use You.com's
+// Search + Contents APIs instead of Firecrawl. Requires YDC_API_KEY.
+const SearchProvider = process.env.SEARCH_PROVIDER ?? 'firecrawl';
+
+async function runSearch(
+  query: string,
+  opts: { limit: number; timeout: number },
+): Promise<SearchResponse> {
+  if (SearchProvider === 'youcom') {
+    return youcom.search(query, opts);
+  }
+  return firecrawl.search(query, {
+    ...opts,
+    scrapeOptions: { formats: ['markdown'] },
+  });
+}
 
 // take en user query, return a list of SERP queries
 async function generateSerpQueries({
@@ -219,10 +237,9 @@ export async function deepResearch({
     serpQueries.map(serpQuery =>
       limit(async () => {
         try {
-          const result = await firecrawl.search(serpQuery.query, {
+          const result = await runSearch(serpQuery.query, {
             timeout: 15000,
             limit: 5,
-            scrapeOptions: { formats: ['markdown'] },
           });
 
           // Collect URLs from this search
