@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { getModel, trimPrompt } from './ai/providers';
 import { systemPrompt } from './prompt';
+import { searchXquik, xquikEnabled } from './xquik';
 
 function log(...args: any[]) {
   console.log(...args);
@@ -35,6 +36,12 @@ const firecrawl = new FirecrawlApp({
   apiKey: process.env.FIRECRAWL_KEY ?? '',
   apiUrl: process.env.FIRECRAWL_BASE_URL,
 });
+
+if (xquikEnabled()) {
+  log(
+    'Xquik X/Twitter search enabled. Social results will supplement web search.',
+  );
+}
 
 // take en user query, return a list of SERP queries
 async function generateSerpQueries({
@@ -219,11 +226,28 @@ export async function deepResearch({
     serpQueries.map(serpQuery =>
       limit(async () => {
         try {
-          const result = await firecrawl.search(serpQuery.query, {
-            timeout: 15000,
-            limit: 5,
-            scrapeOptions: { formats: ['markdown'] },
-          });
+          const [webResult, socialResults] = await Promise.all([
+            firecrawl.search(serpQuery.query, {
+              timeout: 15000,
+              limit: 5,
+              scrapeOptions: { formats: ['markdown'] },
+            }),
+            xquikEnabled()
+              ? searchXquik(serpQuery.query, 5)
+              : Promise.resolve([]),
+          ]);
+
+          const result = {
+            ...webResult,
+            data: [
+              ...webResult.data,
+              ...socialResults.map(item => ({
+                ...item,
+                actions: undefined as never,
+                metadata: { sourceURL: item.url },
+              })),
+            ],
+          } as SearchResponse;
 
           // Collect URLs from this search
           const newUrls = compact(result.data.map(item => item.url));

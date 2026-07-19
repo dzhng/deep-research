@@ -156,6 +156,18 @@ If you have a paid version of Firecrawl or a local version, feel free to increas
 
 If you have a free version, you may sometimes run into rate limit errors, you can reduce the limit to 1 (but it will run a lot slower).
 
+### Optional X/Twitter search
+
+Set `XQUIK_API_KEY` to supplement web results with current public X posts:
+
+```bash
+XQUIK_API_KEY="xq_your_key"
+```
+
+Each research query requests up to 5 posts. Xquik bills 1 credit per returned post. If X search fails, research continues with web results. See the [Search Tweets API](https://docs.xquik.com/api-reference/x/search-tweets).
+
+Xquik is an independent third-party service. Not affiliated with X Corp. "Twitter" and "X" are trademarks of X Corp.
+
 ### DeepSeek R1
 
 Deep research performs great on R1! We use [Fireworks](http://fireworks.ai) as the main provider for the R1 model. To use R1, simply set a Fireworks API key:
@@ -198,7 +210,7 @@ CUSTOM_MODEL="custom_model"
    - Compiles all findings into a comprehensive markdown report
    - Includes all sources and references
    - Organizes information in a clear, readable format
-  
+
 ## Community implementations
 
 **Python**: https://github.com/Finance-LLMs/deep-research-python
