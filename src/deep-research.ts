@@ -1,4 +1,3 @@
-import FirecrawlApp, { SearchResponse } from '@mendable/firecrawl-js';
 import { generateObject } from 'ai';
 import { compact } from 'lodash-es';
 import pLimit from 'p-limit';
@@ -6,6 +5,7 @@ import { z } from 'zod';
 
 import { getModel, trimPrompt } from './ai/providers';
 import { systemPrompt } from './prompt';
+import { getSearchProvider, SearchResponse } from './search/providers';
 
 function log(...args: any[]) {
   console.log(...args);
@@ -27,14 +27,10 @@ type ResearchResult = {
 };
 
 // increase this if you have higher API rate limits
-const ConcurrencyLimit = Number(process.env.FIRECRAWL_CONCURRENCY) || 2;
+const ConcurrencyLimit =
+  Number(process.env.SEARCH_CONCURRENCY ?? process.env.FIRECRAWL_CONCURRENCY) || 2;
 
-// Initialize Firecrawl with optional API key and optional base url
-
-const firecrawl = new FirecrawlApp({
-  apiKey: process.env.FIRECRAWL_KEY ?? '',
-  apiUrl: process.env.FIRECRAWL_BASE_URL,
-});
+const searchProvider = getSearchProvider();
 
 // take en user query, return a list of SERP queries
 async function generateSerpQueries({
@@ -219,10 +215,9 @@ export async function deepResearch({
     serpQueries.map(serpQuery =>
       limit(async () => {
         try {
-          const result = await firecrawl.search(serpQuery.query, {
+          const result = await searchProvider.search(serpQuery.query, {
             timeout: 15000,
             limit: 5,
-            scrapeOptions: { formats: ['markdown'] },
           });
 
           // Collect URLs from this search
