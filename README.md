@@ -78,7 +78,7 @@ flowchart TB
 
 - Node.js environment
 - API keys for:
-  - Firecrawl API (for web search and content extraction)
+  - Firecrawl API or Exa API (for web search and content extraction)
   - OpenAI API (for o3 mini model)
 
 ## Setup
@@ -100,6 +100,13 @@ FIRECRAWL_KEY="your_firecrawl_key"
 # FIRECRAWL_BASE_URL="http://localhost:3002"
 
 OPENAI_KEY="your_openai_key"
+```
+
+To use [Exa](https://exa.ai) for search and content extraction:
+
+```bash
+EXA_API_KEY="your_exa_key"
+SEARCH_PROVIDER="exa"
 ```
 
 To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOINT` and `OPENAI_MODEL`:
