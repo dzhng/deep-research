@@ -11,6 +11,10 @@ abstract class TextSplitter implements TextSplitterParams {
   constructor(fields?: Partial<TextSplitterParams>) {
     this.chunkSize = fields?.chunkSize ?? this.chunkSize;
     this.chunkOverlap = fields?.chunkOverlap ?? this.chunkOverlap;
+    this.validateConfiguration();
+  }
+
+  protected validateConfiguration(): void {
     if (this.chunkOverlap >= this.chunkSize) {
       throw new Error('Cannot have chunkOverlap >= chunkSize');
     }
@@ -44,7 +48,7 @@ abstract class TextSplitter implements TextSplitterParams {
     let total = 0;
     for (const d of splits) {
       const _len = d.length;
-      if (total + _len >= this.chunkSize) {
+      if (total + _len > this.chunkSize) {
         if (total > this.chunkSize) {
           console.warn(
             `Created a chunk of size ${total}, +
@@ -96,6 +100,7 @@ export class RecursiveCharacterTextSplitter
   }
 
   splitText(text: string): string[] {
+    this.validateConfiguration();
     const finalChunks: string[] = [];
 
     // Get appropriate separator to use
