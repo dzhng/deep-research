@@ -78,7 +78,7 @@ flowchart TB
 
 - Node.js environment
 - API keys for:
-  - Firecrawl API (for web search and content extraction)
+  - Firecrawl API (default for web search and content extraction), or select Parallel below without a search API key
   - OpenAI API (for o3 mini model)
 
 ## Setup
@@ -106,6 +106,20 @@ To use local LLM, comment out `OPENAI_KEY` and instead uncomment `OPENAI_ENDPOIN
 
 - Set `OPENAI_ENDPOINT` to the address of your local server (eg."http://localhost:1234/v1")
 - Set `OPENAI_MODEL` to the name of the model loaded in your local server.
+
+### Parallel search (optional)
+
+Set this in `.env.local` to use [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp) for web search and page extraction:
+
+```bash
+SEARCH_PROVIDER="parallel"
+```
+
+No Parallel account or API key is required. You can omit `FIRECRAWL_KEY` with this option; your language-model configuration is still required. When `SEARCH_PROVIDER` is unset or `firecrawl`, the existing Firecrawl setup remains the default. There is no automatic fallback between providers.
+
+During research, generated search queries and research goals go to Parallel at `https://search.parallel.ai/mcp`. The tool then sends up to five result URLs to Parallel for full page text. Available excerpts are used when a page has no full text; page extraction failures are logged and successful pages continue through the research loop. Retrieved text is passed to your configured language-model provider, as with Firecrawl.
+
+The connection uses Streamable HTTP and is rate limited. Each search and extraction pair has a shared 60-second deadline and each response is limited to 10 MiB. The existing `FIRECRAWL_CONCURRENCY` setting also controls Parallel searches. Lower it if you encounter rate limits.
 
 ### Docker
 
