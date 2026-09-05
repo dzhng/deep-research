@@ -1,4 +1,4 @@
-import FirecrawlApp, { SearchResponse } from '@mendable/firecrawl-js';
+import { randomUUID } from 'node:crypto';
 import { generateObject } from 'ai';
 import { compact } from 'lodash-es';
 import pLimit from 'p-limit';
@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { getModel, trimPrompt } from './ai/providers';
 import { systemPrompt } from './prompt';
+import { search, SearchResult } from './search';
 
 function log(...args: any[]) {
   console.log(...args);
@@ -28,13 +29,6 @@ type ResearchResult = {
 
 // increase this if you have higher API rate limits
 const ConcurrencyLimit = Number(process.env.FIRECRAWL_CONCURRENCY) || 2;
-
-// Initialize Firecrawl with optional API key and optional base url
-
-const firecrawl = new FirecrawlApp({
-  apiKey: process.env.FIRECRAWL_KEY ?? '',
-  apiUrl: process.env.FIRECRAWL_BASE_URL,
-});
 
 // take en user query, return a list of SERP queries
 async function generateSerpQueries({
@@ -85,7 +79,7 @@ async function processSerpResult({
   numFollowUpQuestions = 3,
 }: {
   query: string;
-  result: SearchResponse;
+  result: SearchResult;
   numLearnings?: number;
   numFollowUpQuestions?: number;
 }) {
@@ -180,6 +174,7 @@ export async function deepResearch({
   learnings = [],
   visitedUrls = [],
   onProgress,
+  sessionId = randomUUID(),
 }: {
   query: string;
   breadth: number;
@@ -187,6 +182,8 @@ export async function deepResearch({
   learnings?: string[];
   visitedUrls?: string[];
   onProgress?: (progress: ResearchProgress) => void;
+  // Reuse across recursive calls, but never across independent research runs.
+  sessionId?: string;
 }): Promise<ResearchResult> {
   const progress: ResearchProgress = {
     currentDepth: depth,
@@ -219,11 +216,11 @@ export async function deepResearch({
     serpQueries.map(serpQuery =>
       limit(async () => {
         try {
-          const result = await firecrawl.search(serpQuery.query, {
-            timeout: 15000,
-            limit: 5,
-            scrapeOptions: { formats: ['markdown'] },
-          });
+          const result = await search(
+            serpQuery.query,
+            serpQuery.researchGoal,
+            sessionId,
+          );
 
           // Collect URLs from this search
           const newUrls = compact(result.data.map(item => item.url));
@@ -260,6 +257,7 @@ export async function deepResearch({
               learnings: allLearnings,
               visitedUrls: allUrls,
               onProgress,
+              sessionId,
             });
           } else {
             reportProgress({

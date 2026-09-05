@@ -8,6 +8,7 @@
     "start": "tsx --env-file=.env.local src/run.ts",
     "api": "tsx --env-file=.env.local src/api.ts",
     "docker": "tsx src/run.ts",
+    "test:search": "node --import tsx --test src/search.test.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -28,6 +29,7 @@
     "@ai-sdk/fireworks": "^0.1.14",
     "@ai-sdk/openai": "^1.1.9",
     "@mendable/firecrawl-js": "^1.16.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "ai": "^4.1.17",
     "cors": "^2.8.5",
     "express": "^4.18.3",
