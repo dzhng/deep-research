@@ -41,10 +41,14 @@ abstract class TextSplitter implements TextSplitterParams {
   mergeSplits(splits: string[], separator: string): string[] {
     const docs: string[] = [];
     const currentDoc: string[] = [];
+    const separatorLength = separator.length;
     let total = 0;
     for (const d of splits) {
       const _len = d.length;
-      if (total + _len >= this.chunkSize) {
+      if (
+        total + _len + (currentDoc.length > 0 ? separatorLength : 0) >
+        this.chunkSize
+      ) {
         if (total > this.chunkSize) {
           console.warn(
             `Created a chunk of size ${total}, +
@@ -61,15 +65,19 @@ which is longer than the specified ${this.chunkSize}`,
           // - or if we still have any chunks and the length is long
           while (
             total > this.chunkOverlap ||
-            (total + _len > this.chunkSize && total > 0)
+            (total + _len + (currentDoc.length > 0 ? separatorLength : 0) >
+              this.chunkSize &&
+              total > 0)
           ) {
-            total -= currentDoc[0]!.length;
+            total -=
+              currentDoc[0]!.length +
+              (currentDoc.length > 1 ? separatorLength : 0);
             currentDoc.shift();
           }
         }
       }
+      total += _len + (currentDoc.length > 0 ? separatorLength : 0);
       currentDoc.push(d);
-      total += _len;
     }
     const doc = this.joinDocs(currentDoc, separator);
     if (doc !== null) {
